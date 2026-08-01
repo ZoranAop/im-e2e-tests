@@ -96,13 +96,13 @@ parse_stress_output() {
     #   Success: 100.00%
     #   P99: 45ms P95: 32ms
 
-    TOTAL=$(grep -i "total.*message\|发送条数\|消息总量" "${logfile}" | tail -1 | grep -oE '[0-9]+' | tail -1)
-    DURATION=$(grep -i "duration\|时间\|耗时" "${logfile}" | tail -1 | grep -oE '[0-9.]+' | head -1)
-    RATE=$(grep -i "rate\|速率" "${logfile}" | tail -1 | grep -oE '[0-9.]+' | head -1)
-    SUCCESS=$(grep -i "success\|成功率" "${logfile}" | tail -1 | grep -oE '[0-9.]+' | head -1)
-    P99=$(grep -i "p99\|P99" "${logfile}" | tail -1 | grep -oE '[0-9.]+' | head -1)
-    P95=$(grep -i "p95\|P95" "${logfile}" | tail -1 | grep -oE '[0-9.]+' | head -1)
-    CPU=$(grep -i "cpu" "${logfile}" | tail -1 | grep -oE '[0-9.]+' | head -1)
+    TOTAL=$(grep -i "total.*message\|发送条数\|消息总量" "${logfile}" | tail -1 | grep -oE '[0-9]+' | tail -1 || true)
+    DURATION=$(grep -i "duration\|时间\|耗时" "${logfile}" | tail -1 | grep -oE '[0-9.]+' | head -1 || true)
+    RATE=$(grep -i "rate\|速率" "${logfile}" | tail -1 | grep -oE '[0-9.]+' | head -1 || true)
+    SUCCESS=$(grep -i "success\|成功率" "${logfile}" | tail -1 | grep -oE '[0-9.]+' | head -1 || true)
+    P99=$(grep -i "p99\|P99" "${logfile}" | tail -1 | grep -oE '[0-9.]+' | head -1 || true)
+    P95=$(grep -i "p95\|P95" "${logfile}" | tail -1 | grep -oE '[0-9.]+' | head -1 || true)
+    CPU=$(grep -i "cpu" "${logfile}" | tail -1 | grep -oE '[0-9.]+' | head -1 || true)
 
     # Output as bash variables for eval
     echo "TOTAL=${TOTAL:-0}"

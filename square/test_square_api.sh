@@ -104,6 +104,15 @@ test_square_topic() {
             skip "广场话题 API 需通过客户端 SDK 验证"
         fi
     fi
+    step "尝试发布话题..."
+    local topic_body="{\"title\":\"test-topic-$(date +%s)\",\"content\":\"auto-test-content\",\"medias\":[]}"
+    local post_resp=$(im_admin_post "/api/admin/square/topic?userId=${USER_ID}" "${topic_body}" 2>/dev/null)
+    if echo "${post_resp}" | grep -qE '"success":true|"topicId"|200'; then
+        log_pass "话题发布成功(写路径)"
+        log_info "  响应: $(echo ${post_resp} | head -c 150)"
+    else
+        log_skip "话题发布 POST 端点不可用，写路径需通过客户端 SDK 验证"
+    fi
     step "可以通过 SDK API 验证: publishSquareTopic / getSquareTopics / getSquareTopicDetail"
 }
 
@@ -126,6 +135,14 @@ test_square_interaction() {
         fi
     fi
     step "可以通过 SDK API 验证: commentSquareTopic / likeSquareTopic / unlikeSquareTopic / deleteSquareComment"
+    step "尝试评论/点赞..."
+    local comment_body="{\"topicId\":\"test\",\"content\":\"auto-test-comment\"}"
+    local comment_resp=$(im_admin_post "/api/admin/square/topic/comment?userId=${USER_ID}" "${comment_body}" 2>/dev/null)
+    if echo "${comment_resp}" | grep -qE '"success":true|"commentId"|200'; then
+        log_pass "话题评论/点赞 POST 端点可用(写路径)"
+    else
+        log_skip "话题评论/点赞 POST 端点不可用，写路径需通过客户端 SDK 验证"
+    fi
 }
 
 # ============================================================

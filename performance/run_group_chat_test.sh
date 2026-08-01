@@ -34,7 +34,7 @@ source "${SCRIPT_DIR}/lib_stress.sh" 2>/dev/null || true
 # 测试参数
 # ============================================================
 MODE="check"
-while [[ $# -gt 0 ]]; do case "$1" in -m|--mode) MODE="$2"; shift 2;; -h|--help) MODE="help"; shift;; *) shift;; esac; done
+while [[ $# -gt 0 ]]; do case "$1" in -m|--mode) MODE="$2"; shift 2;; check|100|200|1000|verify) MODE="$1"; shift;; *) shift;; esac; done
 GC_CORES="${GC_CORES:-16}"
 REPORT_DIR="${REPORT_DIR:-${SCRIPT_DIR}/reports}"
 REPORT_FILE="${REPORT_DIR}/gc_$(date +%Y%m%d_%H%M%S).md"
@@ -161,6 +161,34 @@ STEPS
 
     print_group_benchmark "100" "74.6" "1,340" "83.75" "8,375"
 
+    print_section "自动执行压测"
+
+    if [ -f "${SCRIPT_DIR}/lib_stress.sh" ] && [ -f "./stress-tool" ]; then
+        log_info "检测到 stress-tool，自动执行群聊压测..."
+        source "${SCRIPT_DIR}/lib_stress.sh"
+        local template="${SCRIPT_DIR}/stress_group_chat.toml"
+        if [ -f "${template}" ]; then
+            run_stress_test "${template}" "gc_100"
+            if [ "${RATE:-0}" != "0" ]; then
+                local dispatch_rate=$(echo "scale=2; ${RATE} / ${GC_CORES:-16} * ${group_size}" | bc -l 2>/dev/null || echo "0")
+                check_benchmark "${dispatch_rate}" "${BENCH_GC_DISPATCH_RATE}" "群聊分发速率"
+                assert_success_rate "${SUCCESS:-0}" "消息成功率"
+                if [ -n "${CPU:-}" ]; then
+                    assert_cpu_under "${CPU}" "100" "CPU利用率"
+                fi
+                if declare -f count_all_messages &>/dev/null; then
+                    local db_count=$(count_all_messages 2>/dev/null || echo "0")
+                    if [ "${db_count}" != "0" ]; then
+                        assert_ge "${db_count}" "${total_msgs}" "数据库落库数"
+                    fi
+                fi
+            fi
+        fi
+    else
+        log_skip "stress-tool 未安装，跳过自动压测"
+        log_info "手动压测后使用验证模式:  export MEASURED_RATE=... && bash $0 --mode verify"
+    fi
+
     if [ -n "${MEASURED_DISPATCH:-}" ]; then
         log_metric "实测单核分发速率" "${MEASURED_DISPATCH} 条/秒/核"
         check_benchmark "${MEASURED_DISPATCH}" "${BENCH_GC_DISPATCH_RATE}" "群聊分发基准"
@@ -222,6 +250,36 @@ STEPS
 
     print_group_benchmark "200" "145.8" "685.8" "42.87" "8,573"
 
+    print_section "自动执行压测"
+
+    if [ -f "${SCRIPT_DIR}/lib_stress.sh" ] && [ -f "./stress-tool" ]; then
+        log_info "检测到 stress-tool，自动执行群聊压测..."
+        source "${SCRIPT_DIR}/lib_stress.sh"
+        local template="${SCRIPT_DIR}/stress_group_chat.toml"
+        if [ -f "${template}" ]; then
+            run_stress_test "${template}" "gc_200"
+            if [ "${RATE:-0}" != "0" ]; then
+                local totalMembers=200
+                local totalMsgs=100000
+                local dispatch_rate=$(echo "scale=2; ${RATE} / ${GC_CORES:-16} * ${totalMembers}" | bc -l 2>/dev/null || echo "0")
+                check_benchmark "${dispatch_rate}" "${BENCH_GC_DISPATCH_RATE}" "群聊分发速率"
+                assert_success_rate "${SUCCESS:-0}" "消息成功率"
+                if [ -n "${CPU:-}" ]; then
+                    assert_cpu_under "${CPU}" "100" "CPU利用率"
+                fi
+                if declare -f count_all_messages &>/dev/null; then
+                    local db_count=$(count_all_messages 2>/dev/null || echo "0")
+                    if [ "${db_count}" != "0" ]; then
+                        assert_ge "${db_count}" "${totalMsgs}" "数据库落库数"
+                    fi
+                fi
+            fi
+        fi
+    else
+        log_skip "stress-tool 未安装，跳过自动压测"
+        log_info "手动压测后使用验证模式:  export MEASURED_RATE=... && bash $0 --mode verify"
+    fi
+
     if [ -n "${MEASURED_DISPATCH:-}" ]; then
         log_metric "实测单核分发速率" "${MEASURED_DISPATCH} 条/秒/核"
         check_benchmark "${MEASURED_DISPATCH}" "${BENCH_GC_DISPATCH_RATE}" "群聊分发基准"
@@ -282,6 +340,36 @@ test_group_1000() {
 STEPS
 
     print_group_benchmark "1000" "142.8" "140" "8.75" "8,750"
+
+    print_section "自动执行压测"
+
+    if [ -f "${SCRIPT_DIR}/lib_stress.sh" ] && [ -f "./stress-tool" ]; then
+        log_info "检测到 stress-tool，自动执行群聊压测..."
+        source "${SCRIPT_DIR}/lib_stress.sh"
+        local template="${SCRIPT_DIR}/stress_group_chat.toml"
+        if [ -f "${template}" ]; then
+            run_stress_test "${template}" "gc_1000"
+            if [ "${RATE:-0}" != "0" ]; then
+                local totalMembers=1000
+                local totalMsgs=20000
+                local dispatch_rate=$(echo "scale=2; ${RATE} / ${GC_CORES:-16} * ${totalMembers}" | bc -l 2>/dev/null || echo "0")
+                check_benchmark "${dispatch_rate}" "${BENCH_GC_DISPATCH_RATE}" "群聊分发速率"
+                assert_success_rate "${SUCCESS:-0}" "消息成功率"
+                if [ -n "${CPU:-}" ]; then
+                    assert_cpu_under "${CPU}" "100" "CPU利用率"
+                fi
+                if declare -f count_all_messages &>/dev/null; then
+                    local db_count=$(count_all_messages 2>/dev/null || echo "0")
+                    if [ "${db_count}" != "0" ]; then
+                        assert_ge "${db_count}" "${totalMsgs}" "数据库落库数"
+                    fi
+                fi
+            fi
+        fi
+    else
+        log_skip "stress-tool 未安装，跳过自动压测"
+        log_info "手动压测后使用验证模式:  export MEASURED_RATE=... && bash $0 --mode verify"
+    fi
 
     if [ -n "${MEASURED_DISPATCH:-}" ]; then
         log_metric "实测单核分发速率" "${MEASURED_DISPATCH} 条/秒/核"

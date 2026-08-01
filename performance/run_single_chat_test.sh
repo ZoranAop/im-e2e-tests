@@ -34,7 +34,7 @@ source "${SCRIPT_DIR}/lib_stress.sh" 2>/dev/null || true
 # 测试参数
 # ============================================================
 MODE="check"
-while [[ $# -gt 0 ]]; do case "$1" in -m|--mode) MODE="$2"; shift 2;; -h|--help) MODE="help"; shift;; *) shift;; esac; done
+while [[ $# -gt 0 ]]; do case "$1" in -m|--mode) MODE="$2"; shift 2;; check|send|recv|full|verify) MODE="$1"; shift;; *) shift;; esac; done
 REPORT_DIR="${REPORT_DIR:-${SCRIPT_DIR}/reports}"
 REPORT_FILE="${REPORT_DIR}/sc_$(date +%Y%m%d_%H%M%S).md"
 
@@ -162,8 +162,35 @@ STEPS
 
 CRITERIA
 
-    # --- 7. 测试结论指引 ---
-    print_section "7. 测试结论指引"
+    # --- 7. 自动执行压测 ---
+    print_section "7. 自动执行压测"
+
+    if [ -f "${SCRIPT_DIR}/lib_stress.sh" ] && [ -f "./stress-tool" ]; then
+        log_info "检测到 stress-tool，自动执行发送压测..."
+        local template="${SCRIPT_DIR}/stress_single_chat.toml"
+        if [ -f "${template}" ]; then
+            source "${SCRIPT_DIR}/lib_stress.sh"
+            run_stress_test "${template}" "sc_send"
+            if [ "${RATE:-0}" != "0" ]; then
+                check_benchmark "${RATE}" "${BENCH_SC_SEND_RATE}" "发送速率基准"
+                assert_success_rate "${SUCCESS:-0}" "消息成功率"
+                local expected_msgs=$((SC_SENDERS * SC_RECEIVERS * SC_ROUNDS))
+                assert_eq "${TOTAL:-0}" "${expected_msgs}" "消息总量"
+                if declare -f count_all_messages &>/dev/null; then
+                    local db_count=$(count_all_messages 2>/dev/null || echo "0")
+                    if [ "${db_count}" != "0" ]; then
+                        assert_ge "${db_count}" "${expected_msgs}" "数据库落库数"
+                    fi
+                fi
+            fi
+        fi
+    else
+        log_skip "stress-tool 未安装，跳过自动压测"
+        log_info "手动压测后使用验证模式:  export MEASURED_RATE=...  && bash $0 --mode verify"
+    fi
+
+    # --- 8. 测试结论指引 ---
+    print_section "8. 测试结论指引"
 
     cat << 'GUIDE'
   脚本已执行环境检查。要完成完整的性能测试并得出 PASS/FAIL 判定，需：
@@ -183,8 +210,8 @@ CRITERIA
 
 GUIDE
 
-    # --- 8. 结果记录模板 ---
-    print_section "8. 测试结果记录"
+    # --- 9. 结果记录模板 ---
+    print_section "9. 测试结果记录"
 
     local elapsed=$(elapsed_sec)
     log_timing "总计耗时" "${elapsed}s"
@@ -292,8 +319,35 @@ STEPS
 
 CRITERIA
 
-    # --- 5. 性能阶段分析 ---
-    print_section "5. 性能模型说明"
+    # --- 5. 自动执行压测 ---
+    print_section "5. 自动执行压测"
+
+    if [ -f "${SCRIPT_DIR}/lib_stress.sh" ] && [ -f "./stress-tool" ]; then
+        log_info "检测到 stress-tool，自动执行收发压测..."
+        local template="${SCRIPT_DIR}/stress_single_chat.toml"
+        if [ -f "${template}" ]; then
+            source "${SCRIPT_DIR}/lib_stress.sh"
+            run_stress_test "${template}" "sc_recv"
+            if [ "${RATE:-0}" != "0" ]; then
+                check_benchmark "${RATE}" "${BENCH_SC_RECV_RATE}" "收发速率基准"
+                assert_success_rate "${SUCCESS:-0}" "消息成功率"
+                local expected_msgs=$((SC_SENDERS * SC_RECEIVERS * SC_ROUNDS))
+                assert_eq "${TOTAL:-0}" "${expected_msgs}" "消息总量"
+                if declare -f count_all_messages &>/dev/null; then
+                    local db_count=$(count_all_messages 2>/dev/null || echo "0")
+                    if [ "${db_count}" != "0" ]; then
+                        assert_ge "${db_count}" "${expected_msgs}" "数据库落库数"
+                    fi
+                fi
+            fi
+        fi
+    else
+        log_skip "stress-tool 未安装，跳过自动压测"
+        log_info "手动压测后使用验证模式:  export MEASURED_RATE=...  && bash $0 --mode verify"
+    fi
+
+    # --- 6. 性能阶段分析 ---
+    print_section "6. 性能模型说明"
 
     cat << 'MODEL'
 
@@ -315,7 +369,7 @@ CRITERIA
 
 MODEL
 
-    print_section "6. 测试结果记录"
+    print_section "7. 测试结果记录"
 
     local elapsed=$(elapsed_sec)
     log_timing "总计耗时" "${elapsed}s"

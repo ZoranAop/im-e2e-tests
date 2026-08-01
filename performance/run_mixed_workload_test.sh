@@ -130,6 +130,16 @@ test_mixed_workload_capacity() {
 
 STEPS
 
+    print_section "基准验证"
+    if [ -n "${MEASURED_MIX_RATE:-}" ]; then
+        check_benchmark "${MEASURED_MIX_RATE}" "${BENCH_MIX_TYPICAL_CORE_RATE}" "混合负载加权单核速率"
+        assert_success_rate "${MEASURED_MIX_SUCCESS:-0}" "混合负载消息成功率"
+    else
+        log_skip "未提供混合负载实测数据"
+        log_info "设置环境变量后验证: export MEASURED_MIX_RATE=108 MEASURED_MIX_SUCCESS=100"
+        log_info "  bash $0 --mode verify"
+    fi
+
     print_summary
 }
 
@@ -142,6 +152,17 @@ main() {
             test_mixed_workload_check
             echo ""
             test_mixed_workload_capacity
+            ;;
+        verify)
+            print_header "混合负载基准验证"
+            if [ -n "${MEASURED_MIX_RATE:-}" ]; then
+                check_benchmark "${MEASURED_MIX_RATE}" "${BENCH_MIX_TYPICAL_CORE_RATE}" "混合负载加权单核速率"
+                assert_success_rate "${MEASURED_MIX_SUCCESS:-0}" "混合负载消息成功率"
+            else
+                log_fail "未提供混合负载实测数据"
+                log_info "  export MEASURED_MIX_RATE=108 MEASURED_MIX_SUCCESS=100"
+            fi
+            print_summary
             ;;
         *)
             echo "用法: $0 --mode <check|full>"

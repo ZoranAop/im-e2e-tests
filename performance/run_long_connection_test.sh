@@ -194,6 +194,15 @@ main() {
             log_info "报告将保存到: ${REPORT_FILE}"
             log_info "完整压测需要部署长连接压测工具"
             test_long_connection_check
+
+            print_section "自动执行长连接测试"
+            if [ -f "./stress-tool" ]; then
+                log_info "长连接压测需专用的 C1000K 测试工具"
+                log_info "stress-tool 不支持模拟百万连接，请使用专用的连接压力工具"
+            else
+                log_skip "长连接压测工具未安装"
+                log_info "手动压测后使用: export LC_DROPOFF=0 LC_CPU=10 LC_MYSQL=0 && bash $0 --mode verify"
+            fi
             ;;
         verify)
             print_header "TC-LC-001 长连接基准验证"

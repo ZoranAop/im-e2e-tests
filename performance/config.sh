@@ -65,6 +65,10 @@ BENCH_SQ_POST_LATENCY_P99=500
 BENCH_SQ_POST_LATENCY_P95=300
 BENCH_SQ_COMMENT_LATENCY_P99=300
 
+# Mixed workload benchmarks
+BENCH_MIX_TYPICAL_CORE_RATE=108      # 典型场景加权单核速率(70/25/5)
+BENCH_MIX_GROUPHEAVY_CORE_RATE=57    # 群聊密集加权单核速率(30/60/10)
+
 # ============================================================
 # 颜色输出
 # ============================================================
@@ -321,7 +325,8 @@ check_prerequisites() {
 
     # 检查 bc（用于浮点计算）
     if ! command -v bc &>/dev/null; then
-        log_warn "缺少 bc 命令，浮点计算将降级为整数计算"
+        log_fail "缺少 bc 命令，浮点计算不可用。请安装: apt-get install bc / yum install bc"
+        return 1
     fi
 
     # 检查 curl

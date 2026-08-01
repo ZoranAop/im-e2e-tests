@@ -32,7 +32,7 @@ source "${SCRIPT_DIR}/lib_stress.sh" 2>/dev/null || true
 # 测试参数
 # ============================================================
 MODE="check"
-while [[ $# -gt 0 ]]; do case "$1" in -m|--mode) MODE="$2"; shift 2;; -h|--help) MODE="help"; shift;; *) shift;; esac; done
+while [[ $# -gt 0 ]]; do case "$1" in -m|--mode) MODE="$2"; shift 2;; check|1000|2000|5000|verify) MODE="$1"; shift;; *) shift;; esac; done
 CR_CORES="${CR_CORES:-8}"
 CR_SENDERS="${CR_SENDERS:-100}"
 CR_MSGS_PER_SENDER="${CR_MSGS_PER_SENDER:-100}"
@@ -135,6 +135,31 @@ STEPS
 
     print_chatroom_benchmark "1,000" "39" "256" "80" "32" "32,000"
 
+    print_section "自动执行压测"
+
+    if [ -f "${SCRIPT_DIR}/lib_stress.sh" ] && [ -f "./stress-tool" ]; then
+        log_info "检测到 stress-tool，自动执行聊天室压测..."
+        source "${SCRIPT_DIR}/lib_stress.sh"
+        local template="${SCRIPT_DIR}/stress_chatroom.toml"
+        if [ -f "${template}" ]; then
+            run_stress_test "${template}" "cr_${members}"
+            if [ "${RATE:-0}" != "0" ]; then
+                local broadcast_rate=$(echo "scale=2; ${RATE} / ${CR_CORES:-8} * ${members}" | bc -l 2>/dev/null || echo "0")
+                check_benchmark "${broadcast_rate}" "${BENCH_CR_BROADCAST_RATE}" "聊天室广播速率"
+                assert_success_rate "${SUCCESS:-0}" "消息落库成功率"
+                if declare -f count_all_messages &>/dev/null; then
+                    local db_count=$(count_all_messages 2>/dev/null || echo "0")
+                    if [ "${db_count}" != "0" ]; then
+                        assert_ge "${db_count}" "${CR_TOTAL_MSGS}" "数据库落库数"
+                    fi
+                fi
+            fi
+        fi
+    else
+        log_skip "stress-tool 未安装，跳过自动压测"
+        log_info "手动压测后使用验证模式:  export MEASURED_RATE=... && bash $0 --mode verify"
+    fi
+
     print_section "测试结果记录"
     local elapsed=$(elapsed_sec)
     log_timing "总计耗时" "${elapsed}s"
@@ -184,6 +209,31 @@ STEPS
 
     print_chatroom_benchmark "2,000" "97" "103" "80" "12.9" "25,773"
 
+    print_section "自动执行压测"
+
+    if [ -f "${SCRIPT_DIR}/lib_stress.sh" ] && [ -f "./stress-tool" ]; then
+        log_info "检测到 stress-tool，自动执行聊天室压测..."
+        source "${SCRIPT_DIR}/lib_stress.sh"
+        local template="${SCRIPT_DIR}/stress_chatroom.toml"
+        if [ -f "${template}" ]; then
+            run_stress_test "${template}" "cr_${members}"
+            if [ "${RATE:-0}" != "0" ]; then
+                local broadcast_rate=$(echo "scale=2; ${RATE} / ${CR_CORES:-8} * ${members}" | bc -l 2>/dev/null || echo "0")
+                check_benchmark "${broadcast_rate}" "${BENCH_CR_BROADCAST_RATE}" "聊天室广播速率"
+                assert_success_rate "${SUCCESS:-0}" "消息落库成功率"
+                if declare -f count_all_messages &>/dev/null; then
+                    local db_count=$(count_all_messages 2>/dev/null || echo "0")
+                    if [ "${db_count}" != "0" ]; then
+                        assert_ge "${db_count}" "${CR_TOTAL_MSGS}" "数据库落库数"
+                    fi
+                fi
+            fi
+        fi
+    else
+        log_skip "stress-tool 未安装，跳过自动压测"
+        log_info "手动压测后使用验证模式:  export MEASURED_RATE=... && bash $0 --mode verify"
+    fi
+
     print_section "测试结果记录"
     local elapsed=$(elapsed_sec)
     log_timing "总计耗时" "${elapsed}s"
@@ -232,6 +282,31 @@ test_chatroom_5000() {
 STEPS
 
     print_chatroom_benchmark "5,000" "97" "21.5" "80" "2.7" "13,440"
+
+    print_section "自动执行压测"
+
+    if [ -f "${SCRIPT_DIR}/lib_stress.sh" ] && [ -f "./stress-tool" ]; then
+        log_info "检测到 stress-tool，自动执行聊天室压测..."
+        source "${SCRIPT_DIR}/lib_stress.sh"
+        local template="${SCRIPT_DIR}/stress_chatroom.toml"
+        if [ -f "${template}" ]; then
+            run_stress_test "${template}" "cr_${members}"
+            if [ "${RATE:-0}" != "0" ]; then
+                local broadcast_rate=$(echo "scale=2; ${RATE} / ${CR_CORES:-8} * ${members}" | bc -l 2>/dev/null || echo "0")
+                check_benchmark "${broadcast_rate}" "${BENCH_CR_BROADCAST_RATE}" "聊天室广播速率"
+                assert_success_rate "${SUCCESS:-0}" "消息落库成功率"
+                if declare -f count_all_messages &>/dev/null; then
+                    local db_count=$(count_all_messages 2>/dev/null || echo "0")
+                    if [ "${db_count}" != "0" ]; then
+                        assert_ge "${db_count}" "${CR_TOTAL_MSGS}" "数据库落库数"
+                    fi
+                fi
+            fi
+        fi
+    else
+        log_skip "stress-tool 未安装，跳过自动压测"
+        log_info "手动压测后使用验证模式:  export MEASURED_RATE=... && bash $0 --mode verify"
+    fi
 
     # --- 结果分析 ---
     print_section "结果趋势分析"
