@@ -35,6 +35,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/../common/utils.sh"
 source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
 source "${SCRIPT_DIR}/../common/db_utils.sh" 2>/dev/null || true
+if [ -f "${SCRIPT_DIR}/../performance/config.sh" ]; then
+    source "${SCRIPT_DIR}/../performance/config.sh"
+fi
 
 # ============================================================
 # 参数
@@ -63,12 +66,11 @@ test_post_feed() {
     local now=$(date +%s)
     local body="{\"type\":0,\"text\":\"测试广场-${now}\",\"medias\":[],\"toUsers\":[],\"excludeUsers\":[],\"mentionedUsers\":[],\"extra\":\"\"}"
     local resp=$(im_admin_post "/api/admin/moments/feed?userId=${USER_ID}" "${body}")
-    if echo "${resp}" | grep -qE '"success":true|"feedId"|200'; then
-        pass "文本广场发布成功"
-        info "  响应: $(echo ${resp} | head -c 200)"
+    local ok=$(echo "${resp}" | grep -cE '"success":true|"feedId"|200' || true)
+    if [ "${ok}" -gt 0 ]; then
+        log_pass "文本广场发布成功"
     else
-        fail "文本广场发布失败"
-        info "  响应: ${resp}"
+        log_fail "文本广场发布失败 - 响应: $(echo ${resp} | head -c 100)"
     fi
 
     step "发布图片广场 (type=1)..."

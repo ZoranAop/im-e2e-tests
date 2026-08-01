@@ -26,6 +26,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/config.sh"
 source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
+source "${SCRIPT_DIR}/../common/db_utils.sh" 2>/dev/null || true
 
 # ============================================================
 # 测试参数（可通过命令行或环境变量覆盖）
@@ -194,11 +195,27 @@ main() {
             log_info "完整压测需要部署长连接压测工具"
             test_long_connection_check
             ;;
+        verify)
+            print_header "TC-LC-001 长连接基准验证"
+            if [ -n "${LC_DROPOFF:-}" ]; then
+                assert_eq "${LC_DROPOFF}" "${BENCH_LC_DROPOFF}" "掉线率(0%)"
+            else
+                log_skip "未提供掉线率数据"
+            fi
+            if [ -n "${LC_CPU:-}" ]; then
+                assert_cpu_under "${LC_CPU}" "${BENCH_LC_CPU_MAX}" "CPU利用率(≤12核)"
+            fi
+            if [ -n "${LC_MYSQL:-}" ]; then
+                assert_eq "${LC_MYSQL}" "${BENCH_LC_MYSQL_CPU}" "MySQL利用率(≈0%)"
+            fi
+            print_summary
+            ;;
         *)
-            echo "用法: $0 [--mode check|full]"
+            echo "用法: $0 [--mode check|full|verify]"
             echo ""
-            echo "  check  仅检查环境和配置（默认）"
-            echo "  full   完整测试（需要部署压测工具）"
+            echo "  check   仅检查环境和配置（默认）"
+            echo "  full    完整测试（需要部署压测工具）"
+            echo "  verify  基准验证模式"
             echo ""
             echo "环境变量:"
             echo "  IM_HOST          IM 服务地址 (默认: localhost)"

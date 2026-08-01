@@ -26,6 +26,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/config.sh"
 source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
+source "${SCRIPT_DIR}/lib_stress.sh" 2>/dev/null || true
 
 # ============================================================
 # 测试参数
@@ -282,13 +283,28 @@ main() {
         5000)
             test_chatroom_5000
             ;;
+        verify)
+            print_header "聊天室消息 基准验证"
+            if [ -n "${RATE:-}" ] && [ "${RATE}" != "0" ]; then
+                local broadcast_rate=$(echo "scale=2; ${RATE} / ${CR_CORES:-8} * ${VERIFY_CHATROOM_SIZE:-1000}" | bc 2>/dev/null || echo "0")
+                log_metric "实测单核广播速率" "${broadcast_rate} 条/秒/核"
+                check_benchmark "${broadcast_rate}" "${BENCH_CR_BROADCAST_RATE}" "聊天室广播基准"
+                assert_success_rate "${SUCCESS:-0}" "消息落库成功率"
+            else
+                log_fail "未提供实测数据。设置环境变量:"
+                log_info "  export RATE=13000 SUCCESS=100 VERIFY_CHATROOM_SIZE=1000"
+                log_info "  bash $0 --mode verify"
+            fi
+            print_summary
+            ;;
         *)
-            echo "用法: $0 --mode <check|1000|2000|5000>"
+            echo "用法: $0 --mode <check|1000|2000|5000|verify>"
             echo ""
-            echo "  check  仅检查环境配置"
-            echo "  1000   执行千人聊天室测试 (TC-CR-1000)"
-            echo "  2000   执行两千人聊天室测试 (TC-CR-2000)"
-            echo "  5000   执行五千人聊天室测试 (TC-CR-5000)"
+            echo "  check   仅检查环境配置"
+            echo "  1000    执行千人聊天室测试 (TC-CR-1000)"
+            echo "  2000    执行两千人聊天室测试 (TC-CR-2000)"
+            echo "  5000    执行五千人聊天室测试 (TC-CR-5000)"
+            echo "  verify  基准验证模式"
             echo ""
             echo "环境变量:"
             echo "  IM_HOST              IM 服务地址"

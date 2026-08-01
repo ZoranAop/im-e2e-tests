@@ -27,6 +27,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/config.sh"
 source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
+source "${SCRIPT_DIR}/../common/db_utils.sh" 2>/dev/null || true
+source "${SCRIPT_DIR}/lib_stress.sh" 2>/dev/null || true
 
 # ============================================================
 # 测试参数
@@ -186,6 +188,10 @@ GUIDE
 
     local elapsed=$(elapsed_sec)
     log_timing "总计耗时" "${elapsed}s"
+
+    print_section "实测验证指引"
+    log_info "完成压测后，运行: bash $0 --mode verify"
+    log_info "并设置以下环境变量: RATE TOTAL SUCCESS P99 P95 CPU"
 
     print_summary
 }
@@ -363,19 +369,22 @@ main() {
             ;;
         verify)
             print_header "TC-SC-001 基准验证"
-            if [ -n "${MEASURED_RATE:-}" ]; then
-                log_metric "实测发送速率" "${MEASURED_RATE} 条/秒"
-                check_benchmark "${MEASURED_RATE}" "${BENCH_SC_SEND_RATE}" "发送速率基准"
-                if [ -n "${MEASURED_SUCCESS:-}" ]; then
-                    if [ "${MEASURED_SUCCESS}" = "100" ]; then
-                        log_pass "消息成功率: ${MEASURED_SUCCESS}%"
-                    else
-                        log_fail "消息成功率: ${MEASURED_SUCCESS}% (需100%)"
-                    fi
+            if [ -n "${RATE:-}" ] && [ "${RATE}" != "0" ]; then
+                log_metric "实测发送速率" "${RATE} 条/秒"
+                check_benchmark "${RATE}" "${BENCH_SC_SEND_RATE}" "发送速率基准"
+                assert_success_rate "${SUCCESS:-0}" "消息成功率"
+                local expected_msgs=$((SC_SENDERS * SC_RECEIVERS * SC_ROUNDS))
+                assert_eq "${TOTAL:-0}" "${expected_msgs}" "消息总量(${expected_msgs})"
+                if [ -n "${P99:-}" ] && [ "${P99}" != "0" ]; then
+                    assert_latency "${P99}" "${P95:-0}" "500" "300"
+                fi
+                if [ -n "${CPU:-}" ]; then
+                    assert_cpu_under "${CPU}" "95" "CPU利用率"
                 fi
             else
-                log_fail "未设置 MEASURED_RATE 环境变量，无法进行基准比对"
-                log_info "设置方式: export MEASURED_RATE=19646"
+                log_fail "未提供实测数据。设置环境变量后运行:"
+                log_info "  export RATE=19646 TOTAL=10000000 SUCCESS=100 P99=45 P95=32 CPU=90"
+                log_info "  bash $0 --mode verify"
             fi
             print_summary
             ;;

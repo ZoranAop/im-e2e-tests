@@ -27,6 +27,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/config.sh"
 source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
+source "${SCRIPT_DIR}/../common/db_utils.sh" 2>/dev/null || true
+source "${SCRIPT_DIR}/lib_stress.sh" 2>/dev/null || true
 
 # ============================================================
 # 测试参数
@@ -339,13 +341,19 @@ main() {
             test_group_1000
             ;;
         verify)
-            print_header "群聊消息测试 - 基准验证"
-            if [ -n "${MEASURED_DISPATCH:-}" ]; then
-                log_metric "实测单核分发速率" "${MEASURED_DISPATCH} 条/秒/核"
-                check_benchmark "${MEASURED_DISPATCH}" "${BENCH_GC_DISPATCH_RATE}" "群聊分发基准"
+            print_header "群聊消息 基准验证"
+            if [ -n "${RATE:-}" ] && [ "${RATE}" != "0" ]; then
+                local dispatch_rate=$(echo "scale=2; ${RATE} / ${GC_CORES:-16} * ${VERIFY_GROUP_SIZE:-1000}" | bc 2>/dev/null || echo "0")
+                log_metric "实测单核分发速率" "${dispatch_rate} 条/秒/核"
+                check_benchmark "${dispatch_rate}" "${BENCH_GC_DISPATCH_RATE}" "群聊分发基准"
+                assert_success_rate "${SUCCESS:-0}" "消息成功率"
+                if [ -n "${CPU:-}" ]; then
+                    assert_cpu_under "${CPU}" "100" "CPU利用率"
+                fi
             else
-                log_fail "未设置 MEASURED_DISPATCH 环境变量，无法进行基准比对"
-                log_info "设置方式: export MEASURED_DISPATCH=8750"
+                log_fail "未提供实测数据。设置环境变量:"
+                log_info "  export RATE=8750 SUCCESS=100 CPU=100 VERIFY_GROUP_SIZE=1000"
+                log_info "  bash $0 --mode verify"
             fi
             print_summary
             ;;

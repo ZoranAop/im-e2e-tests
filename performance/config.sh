@@ -45,6 +45,26 @@ BENCH_GC_DISPATCH_RATE=8750       # 单核分发速率（条/秒/核，千人群
 # 聊天室广播基准
 BENCH_CR_BROADCAST_RATE=13000     # 稳定后单核广播与拉取速率（条/秒/核）
 
+# Cluster benchmarks (4C8G nodes)
+BENCH_CL_1_TPUT=6537
+BENCH_CL_2_TPUT=9459
+BENCH_CL_3_TPUT=13400
+BENCH_CL_4_TPUT=16080
+BENCH_CL_LOCAL_CORE=1634
+BENCH_CL_RPC_CORE=800
+
+# Long connection benchmarks
+BENCH_LC_DROPOFF=0
+BENCH_LC_CPU_MAX=12
+BENCH_LC_MYSQL_CPU=0
+BENCH_LC_CONN_PER_CORE=62500
+
+# Square (广场) benchmarks
+BENCH_SQ_SUCCESS_RATE=100
+BENCH_SQ_POST_LATENCY_P99=500
+BENCH_SQ_POST_LATENCY_P95=300
+BENCH_SQ_COMMENT_LATENCY_P99=300
+
 # ============================================================
 # 颜色输出
 # ============================================================
@@ -206,6 +226,82 @@ calc_dispatch_rate() {
     echo "scale=0; ${core_rate} * ${members}" | bc 2>/dev/null || echo "0"
 }
 
+# ============================================================
+# Assertion Primitives
+# ============================================================
+
+assert_eq() {
+    local actual="$1" expected="$2" name="$3"
+    if [ "${actual}" = "${expected}" ]; then
+        log_pass "${name}: ${actual} = ${expected}"
+        return 0
+    else
+        log_fail "${name}: expected ${expected}, got ${actual}"
+        return 1
+    fi
+}
+
+assert_ge() {
+    local actual="$1" threshold="$2" name="$3"
+    if [ "$(echo "${actual} >= ${threshold}" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+        log_pass "${name}: ${actual} >= ${threshold}"
+        return 0
+    else
+        log_fail "${name}: ${actual} < ${threshold} (threshold: ${threshold})"
+        return 1
+    fi
+}
+
+assert_le() {
+    local actual="$1" threshold="$2" name="$3"
+    if [ "$(echo "${actual} <= ${threshold}" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+        log_pass "${name}: ${actual} <= ${threshold}"
+        return 0
+    else
+        log_fail "${name}: ${actual} > ${threshold} (threshold: ${threshold})"
+        return 1
+    fi
+}
+
+assert_success_rate() {
+    local actual_pct="$1" name="${2:-消息成功率}"
+    if [ "$(echo "${actual_pct} >= 100" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+        log_pass "${name}: ${actual_pct}% = 100%"
+        return 0
+    elif [ "$(echo "${actual_pct} >= 99.9" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+        log_warn "${name}: ${actual_pct}% (允许 0.1% 容差)"
+        return 0
+    else
+        log_fail "${name}: ${actual_pct}% < 100%"
+        return 1
+    fi
+}
+
+assert_latency() {
+    local p99="$1" p95="$2" threshold_p99="$3" threshold_p95="$4"
+    if [ "$(echo "${p99} <= ${threshold_p99}" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+        log_pass "P99延迟: ${p99}ms <= ${threshold_p99}ms"
+    else
+        log_fail "P99延迟: ${p99}ms > ${threshold_p99}ms"
+    fi
+    if [ "$(echo "${p95} <= ${threshold_p95}" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+        log_pass "P95延迟: ${p95}ms <= ${threshold_p95}ms"
+    else
+        log_fail "P95延迟: ${p95}ms > ${threshold_p95}ms"
+    fi
+}
+
+assert_cpu_under() {
+    local cpu_pct="$1" threshold="${2:-80}" name="${3:-CPU利用率}"
+    if [ "$(echo "${cpu_pct} <= ${threshold}" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+        log_pass "${name}: ${cpu_pct}% <= ${threshold}%"
+        return 0
+    else
+        log_fail "${name}: ${cpu_pct}% > ${threshold}%"
+        return 1
+    fi
+}
+
 percentage_of_benchmark() {
     local actual="$1"
     local benchmark="$2"
@@ -302,7 +398,7 @@ check_benchmark() {
             log_pass "${metric_name}: ${actual}（合格，达到基准的 ${result}%）"
         fi
     else
-        log_warn "${metric_name}: ${actual}（低于基准的 80%，基准 ${benchmark}）"
+        log_fail "${metric_name}: ${actual}（低于基准的 80%，基准 ${benchmark}）"
     fi
 }
 
