@@ -49,10 +49,7 @@ ROBOT_ID="${ROBOT_ID:-FireRobot}"
 TARGET_USER_ID="${TARGET_USER_ID:-}"
 
 # ============================================================
-# MongoDB 连接（可选，用于数据验证）
-# ============================================================
-MONGO_HOST="${MONGO_HOST:-localhost}"
-MONGO_PORT="${MONGO_PORT:-27017}"
+# MongoDB 连接（通过 db_utils.sh 定义，此处仅设 DB 名）
 MONGO_DB="${MONGO_DB:-imdb}"
 
 # ============================================================

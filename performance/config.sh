@@ -535,9 +535,6 @@ pass() { log_pass "$@"; }
 fail() { log_fail "$@"; }
 skip() { log_skip "$@"; }
 info() { log_info "$@"; }
-PASS_COUNT="${PASSED_TESTS}"
-FAIL_COUNT="${FAILED_TESTS}"
-SKIP_COUNT="${SKIPPED_TESTS}"
 
 # ============================================================
 # 基准验证模式

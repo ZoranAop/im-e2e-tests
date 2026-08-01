@@ -4,6 +4,13 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# -- Import config.sh if available (for log_* + env vars) --
+if [ -f "${SCRIPT_DIR}/../performance/config.sh" ]; then
+    source "${SCRIPT_DIR}/../performance/config.sh"
+fi
+
 # ============================================================
 # 配置（可通过环境变量覆盖）
 # ============================================================
@@ -21,7 +28,7 @@ PUSH_URL="http://${PUSH_HOST}:${PUSH_PORT}"
 PUSH_ADMIN_URL="http://${PUSH_HOST}:${PUSH_ADMIN_PORT}"
 
 # ============================================================
-# 颜色输出
+# 颜色输出（config.sh 未加载时的回退）
 # ============================================================
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -53,21 +60,25 @@ step() {
 }
 
 pass() {
+    if declare -f log_pass &>/dev/null; then log_pass "$@"; return; fi
     PASS_COUNT=$((PASS_COUNT + 1))
     echo -e "${GREEN}PASS${NC}: $1"
 }
 
 fail() {
+    if declare -f log_fail &>/dev/null; then log_fail "$@"; return; fi
     FAIL_COUNT=$((FAIL_COUNT + 1))
     echo -e "${RED}FAIL${NC}: $1"
 }
 
 skip() {
+    if declare -f log_skip &>/dev/null; then log_skip "$@"; return; fi
     SKIP_COUNT=$((SKIP_COUNT + 1))
     echo -e "${YELLOW}SKIP${NC}: $1"
 }
 
 info() {
+    if declare -f log_info &>/dev/null; then log_info "$@"; return; fi
     echo -e "${GRAY}INFO: $1${NC}"
 }
 

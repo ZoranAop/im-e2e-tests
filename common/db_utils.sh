@@ -12,11 +12,7 @@ if ! declare -f log_pass &>/dev/null; then
     fi
 fi
 
-MYSQL_HOST="${MYSQL_HOST:-localhost}"
-MYSQL_PORT="${MYSQL_PORT:-3306}"
-MYSQL_USER="${MYSQL_USER:-root}"
-MYSQL_PASS="${MYSQL_PASS:-}"
-MYSQL_DB="${MYSQL_DB:-imdb}"
+# MYSQL_* provided by config.sh; MONGO_* defined here
 MONGO_HOST="${MONGO_HOST:-localhost}"
 MONGO_PORT="${MONGO_PORT:-27017}"
 MONGO_DB="${MONGO_DB:-imdb}"
