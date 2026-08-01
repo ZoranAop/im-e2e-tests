@@ -146,8 +146,8 @@ run_stress_test() {
     local config="${STRESS_CONFIG_DIR}/config_${label}.toml"
     
     render_toml "${template}" "${config}" || return 1
-    local logfile=$(launch_stress "${config}" "${label}")
-    if [ $? -ne 0 ] && [ ! -f "${logfile}" ]; then
+    local logfile=$(launch_stress "${config}" "${label}" | tail -1) || true
+    if [ ! -f "${logfile}" ]; then
         return 1
     fi
     
