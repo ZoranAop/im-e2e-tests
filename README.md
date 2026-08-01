@@ -140,6 +140,28 @@ bash square/test_square_api.sh --user-id "your_user_id"
 
 # 推送服务测试
 bash push/test_push_server.sh
+
+# ===== 基准验证（无 stress-tool 时用） =====
+
+# 单聊: 喂入实测值做基准比对
+RATE=19646 TOTAL=10000000 SUCCESS=100 \
+  bash performance/run_single_chat_test.sh --mode verify
+
+# 集群: 喂入实测值
+MEASURED_CR_RATE=13000 MEASURED_CR_SUCCESS=100 \
+  bash performance/run_cluster_test.sh --mode verify
+
+# 混合负载
+MEASURED_MIX_RATE=108 MEASURED_MIX_SUCCESS=100 \
+  bash performance/run_mixed_workload_test.sh --mode verify
+
+# 长连接
+LC_DROPOFF=0 LC_CPU=10 LC_MYSQL=0 \
+  bash performance/run_long_connection_test.sh --mode verify
+
+# ===== k6 负载测试 =====
+
+k6 run -e IM_HOST=<host> -e IM_PORT=80 performance/k6_single_chat.js
 ```
 
 ### Windows (PowerShell)
@@ -172,6 +194,13 @@ $env:PUSH_HOST = "<your-push-server-ip>"
 
 # 推送服务测试
 .\push\test_push_server.ps1
+
+# ===== 基准验证 =====
+$env:RATE = "19646"; $env:SUCCESS = "100"
+.\performance\run_single_chat_test.ps1
+
+# ===== k6 负载测试 =====
+k6 run -e IM_HOST=<host> -e IM_PORT=80 performance/k6_single_chat.js
 ```
 
 ## 测试覆盖范围
@@ -275,6 +304,36 @@ $env:PUSH_HOST = "<your-push-server-ip>"
 | `utils.sh` / `utils.ps1` | 日志输出、断言、HTTP 请求、TCP 检查、重试机制、JSON 结果输出 |
 | `env.sh` | `.env` 文件加载（自动读取键值对并导出为环境变量） |
 | `db_utils.sh` | MySQL 连接检查/查询、MongoDB 连接检查/查询、消息分表统计 |
+| `test_data_factory.sh` | 测试数据生成（用户/消息/群组工厂函数） |
+| `data_quality_check.sh` | 数据质量关卡（消息计数完整性/成功率/P99/分表完整性） |
+
+## 自测模式（无需真实 IM 服务）
+
+```bash
+# 启动内置 mock IM 服务
+python3 ci/mock_im_server.py 18080 &
+
+# 验证连通性
+curl http://localhost:18080/api/version
+
+# 运行基准 verify（喂入达标值，验证断言引擎）
+RATE=19646 TOTAL=10000000 SUCCESS=100 P99=45 P95=32 CPU=90 \
+  bash performance/run_single_chat_test.sh --mode verify
+
+# k6 负载测试
+k6 run -e IM_HOST=localhost -e IM_PORT=18080 performance/k6_single_chat.js
+```
+
+## CI 流水线
+
+推送/PR 到 `main` 时自动触发（`.github/workflows/test.yml`）：
+
+| 阶段 | 内容 | 门禁 |
+|------|------|------|
+| 语法检查 | `bash -n` 全量脚本 | 语法错误 → 失败 |
+| 环境预检 | 5 个性能场景 `check` + push/square smoke | 连通性失败 → 失败 |
+| k6 负载 | 真实 HTTP 负载，P95<500ms / P99<1000ms | 阈值超标 → 失败 |
+| 基准验证 | 4 场景 verify（喂达标值触发断言引擎） | 断言失败 → 失败 |
 
 ## 输出说明
 
