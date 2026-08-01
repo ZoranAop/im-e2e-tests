@@ -15,7 +15,7 @@
 #
 # 用法:
 #   bash test_moments_api.sh --user-id "your_user_id"
-#   export IM_HOST="192.168.1.100"; bash test_moments_api.sh
+#   export IM_HOST="<your-im-server-ip>"; bash test_moments_api.sh
 #
 # 测试覆盖:
 #   TC-MT-001: 发布广场（文本/图片/视频/链接）

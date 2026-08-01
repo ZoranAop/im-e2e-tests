@@ -11,7 +11,7 @@
 #
 # 用法:
 #   bash test_square_api.sh --user-id "your_user_id"
-#   export IM_HOST="192.168.1.100"; bash test_square_api.sh
+#   export IM_HOST="<your-im-server-ip>"; bash test_square_api.sh
 #
 # ============================================================
 

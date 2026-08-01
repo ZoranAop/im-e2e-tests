@@ -68,7 +68,7 @@ test-scripts/
 
 ```bash
 # 方法一: 环境变量
-export IM_HOST="192.168.1.100"
+export IM_HOST="<your-im-server-ip>"
 
 # 方法二: .env 文件
 cp .env.example .env
@@ -136,8 +136,8 @@ bash push/test_push_server.sh
 
 ```powershell
 # 配置目标服务器
-$env:IM_HOST = "192.168.1.100"
-$env:PUSH_HOST = "192.168.1.101"
+$env:IM_HOST = "<your-im-server-ip>"
+$env:PUSH_HOST = "<your-push-server-ip>"
 
 # ===== 性能测试 =====
 

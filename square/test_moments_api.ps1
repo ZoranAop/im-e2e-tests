@@ -9,7 +9,7 @@
 # 用法:
 #   .\test_moments_api.ps1
 #   或指定 IM 地址:
-#   $env:IM_HOST="192.168.1.100"; .\test_moments_api.ps1
+#   $env:IM_HOST="<your-im-server-ip>"; .\test_moments_api.ps1
 
 param(
     [string]$TestUserId = "test_user_01",

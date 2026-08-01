@@ -8,7 +8,7 @@
 # 用法:
 #   .\test_push_server.ps1
 #   或指定地址:
-#   $env:PUSH_HOST="192.168.1.100"; .\test_push_server.ps1
+#   $env:PUSH_HOST="<your-push-server-ip>"; .\test_push_server.ps1
 
 param(
     [string]$TestUserId = "test_user_01",
