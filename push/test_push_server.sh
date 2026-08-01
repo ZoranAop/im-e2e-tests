@@ -4,6 +4,8 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/../common/utils.sh"
+source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
+source "${SCRIPT_DIR}/../common/db_utils.sh" 2>/dev/null || true
 
 TEST_USER_ID="${1:-test_user_01}"
 DEVICE_TOKEN="${2:-test_device_token_001}"

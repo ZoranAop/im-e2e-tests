@@ -26,11 +26,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/config.sh"
+source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
 
 # ============================================================
 # 测试参数
 # ============================================================
-MODE="${1:-check}"
+MODE="check"
+while [[ $# -gt 0 ]]; do case "$1" in -m|--mode) MODE="$2"; shift 2;; -h|--help) MODE="help"; shift;; *) shift;; esac; done
 GC_CORES="${GC_CORES:-16}"
 REPORT_DIR="${REPORT_DIR:-${SCRIPT_DIR}/reports}"
 REPORT_FILE="${REPORT_DIR}/gc_$(date +%Y%m%d_%H%M%S).md"
@@ -126,7 +128,7 @@ test_group_100() {
     # --- 测试指引 ---
     print_section "测试步骤"
 
-    cat << 'STEPS'
+    cat << STEPS
 
   操作步骤:
 
@@ -156,6 +158,11 @@ test_group_100() {
 STEPS
 
     print_group_benchmark "100" "74.6" "1,340" "83.75" "8,375"
+
+    if [ -n "${MEASURED_DISPATCH:-}" ]; then
+        log_metric "实测单核分发速率" "${MEASURED_DISPATCH} 条/秒/核"
+        check_benchmark "${MEASURED_DISPATCH}" "${BENCH_GC_DISPATCH_RATE}" "群聊分发基准"
+    fi
 
     print_section "测试结果记录"
     local elapsed=$(elapsed_sec)
@@ -213,6 +220,11 @@ STEPS
 
     print_group_benchmark "200" "145.8" "685.8" "42.87" "8,573"
 
+    if [ -n "${MEASURED_DISPATCH:-}" ]; then
+        log_metric "实测单核分发速率" "${MEASURED_DISPATCH} 条/秒/核"
+        check_benchmark "${MEASURED_DISPATCH}" "${BENCH_GC_DISPATCH_RATE}" "群聊分发基准"
+    fi
+
     print_section "测试结果记录"
     local elapsed=$(elapsed_sec)
     log_timing "总计耗时" "${elapsed}s"
@@ -269,6 +281,11 @@ STEPS
 
     print_group_benchmark "1000" "142.8" "140" "8.75" "8,750"
 
+    if [ -n "${MEASURED_DISPATCH:-}" ]; then
+        log_metric "实测单核分发速率" "${MEASURED_DISPATCH} 条/秒/核"
+        check_benchmark "${MEASURED_DISPATCH}" "${BENCH_GC_DISPATCH_RATE}" "群聊分发基准"
+    fi
+
     # --- 性能分析 ---
     print_section "群聊分发性能分析"
 
@@ -320,6 +337,17 @@ main() {
             ;;
         1000)
             test_group_1000
+            ;;
+        verify)
+            print_header "群聊消息测试 - 基准验证"
+            if [ -n "${MEASURED_DISPATCH:-}" ]; then
+                log_metric "实测单核分发速率" "${MEASURED_DISPATCH} 条/秒/核"
+                check_benchmark "${MEASURED_DISPATCH}" "${BENCH_GC_DISPATCH_RATE}" "群聊分发基准"
+            else
+                log_fail "未设置 MEASURED_DISPATCH 环境变量，无法进行基准比对"
+                log_info "设置方式: export MEASURED_DISPATCH=8750"
+            fi
+            print_summary
             ;;
         *)
             echo "用法: $0 --mode <check|100|200|1000>"

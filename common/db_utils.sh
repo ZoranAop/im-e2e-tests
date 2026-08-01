@@ -4,6 +4,11 @@
 
 set -euo pipefail
 
+if declare -f log_pass &>/dev/null; then true
+elif [ -f "$(dirname "$0")/../performance/config.sh" ]; then
+    source "$(dirname "$0")/../performance/config.sh"
+fi
+
 MYSQL_HOST="${MYSQL_HOST:-localhost}"
 MYSQL_PORT="${MYSQL_PORT:-3306}"
 MYSQL_USER="${MYSQL_USER:-root}"

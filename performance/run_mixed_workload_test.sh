@@ -14,8 +14,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/config.sh"
+source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
 
-MODE="${1:-check}"
+MODE="check"
+while [[ $# -gt 0 ]]; do case "$1" in -m|--mode) MODE="$2"; shift 2;; -h|--help) MODE="help"; shift;; *) shift;; esac; done
 
 # --- Workload Profile 1: Typical ---
 # 70% single chat, 25% group chat, 5% chatroom

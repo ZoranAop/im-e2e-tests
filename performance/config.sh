@@ -388,3 +388,34 @@ print_summary() {
         return 0
     fi
 }
+
+pass() { log_pass "$@"; }
+fail() { log_fail "$@"; }
+skip() { log_skip "$@"; }
+info() { log_info "$@"; }
+PASS_COUNT="${PASSED_TESTS}"
+FAIL_COUNT="${FAILED_TESTS}"
+SKIP_COUNT="${SKIPPED_TESTS}"
+
+# ============================================================
+# 基准验证模式
+# ============================================================
+
+run_verify_mode() {
+    local test_name="$1"
+    local measured="$2"
+    local benchmark="$3"
+    local unit="$4"
+    
+    print_section "${test_name} 基准验证"
+    if [ -z "${measured}" ]; then
+        log_warn "未提供实测值，设置环境变量后使用 --mode verify 进行判定"
+        log_info "  bash $0 --mode verify"
+        return 1
+    fi
+    
+    log_metric "实测值" "${measured} ${unit}"
+    log_metric "基准值" "${benchmark} ${unit}"
+    check_benchmark "${measured}" "${benchmark}" "${test_name}"
+    return 0
+}

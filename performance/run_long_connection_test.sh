@@ -25,11 +25,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/config.sh"
+source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
 
 # ============================================================
 # 测试参数（可通过命令行或环境变量覆盖）
 # ============================================================
-MODE="${1:-check}"
+MODE="check"
+while [[ $# -gt 0 ]]; do case "$1" in -m|--mode) MODE="$2"; shift 2;; -h|--help) MODE="help"; shift;; *) shift;; esac; done
 CONNECTION_COUNT="${LC_CONN_COUNT:-1000000}"
 DURATION_MINUTES="${LC_DURATION:-30}"
 IM_SERVER_SPEC="${LC_SERVER_SPEC:-16C32G}"
@@ -164,6 +166,15 @@ test_long_connection_check() {
   - MySQL 利用率 = 0%
 
 GUIDE
+
+    # --- 6. 数据库校验指引 ---
+    print_section "6. 数据库校验指引"
+    cat << 'DBCHECK'
+  压测完成后，验证 MySQL 连接数为 0:
+    SELECT COUNT(*) FROM information_schema.processlist WHERE USER != 'root';
+  
+  长连接不产生消息，t_messages_X 表应无新增。
+DBCHECK
 
     print_summary
 }

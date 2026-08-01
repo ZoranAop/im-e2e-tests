@@ -33,11 +33,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/config.sh"
+source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
 
 # ============================================================
 # 测试参数
 # ============================================================
-MODE="${1:-check}"
+MODE="check"
+while [[ $# -gt 0 ]]; do case "$1" in -m|--mode) MODE="$2"; shift 2;; -h|--help) MODE="help"; shift;; *) shift;; esac; done
 REPORT_DIR="${REPORT_DIR:-${SCRIPT_DIR}/reports}"
 REPORT_FILE="${REPORT_DIR}/cl_$(date +%Y%m%d_%H%M%S).md"
 

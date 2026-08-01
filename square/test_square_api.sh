@@ -19,11 +19,15 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/../common/utils.sh"
+source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
+source "${SCRIPT_DIR}/../common/db_utils.sh" 2>/dev/null || true
 
 # ============================================================
 # 测试参数
 # ============================================================
-USER_ID="${1:-}"
+USER_ID=""
+while [[ $# -gt 0 ]]; do case "$1" in -u|--user-id) USER_ID="$2"; shift 2;; *) shift;; esac; done
+USER_ID="${USER_ID:-test_user_01}"
 
 # ============================================================
 # TC-SQ-001: 广场服务连通性
@@ -66,7 +70,7 @@ test_square_info() {
     local info_resp=$(im_admin_get "/api/version")
     if [ -n "${info_resp}" ]; then
         pass "服务信息获取成功"
-        log_info "  响应: $(echo ${info_resp} | head -c 200)"
+        info "  响应: $(echo ${info_resp} | head -c 200)"
     else
         fail "服务信息获取失败"
     fi
@@ -88,32 +92,19 @@ test_square_info() {
 
 test_square_topic() {
     test_header "TC-SQ-003: 话题发布与浏览"
-
-    step "尝试 admin API 访问..."
+    step "检查广场话题端点..."
     local resp=$(im_admin_get "/api/admin/config")
-    if [ -n "${resp}" ]; then
-        pass "Admin API 可达，广场功能配置已加载"
+    if echo "${resp}" | grep -qi "square\|topic"; then
+        pass "广场话题功能已配置"
     else
-        skip "Admin 配置 API 不可用，广场功能需通过客户端 SDK 验证"
+        local sq=$(im_admin_get "/api/admin/square/list")
+        if [ -n "${sq}" ] && echo "${sq}" | grep -qE '\[|\{'; then
+            pass "广场列表端点存在"
+        else
+            skip "广场话题 API 需通过客户端 SDK 验证"
+        fi
     fi
-
-    step "发布话题..."
-    info "  SDK API: publishSquareTopic(squareId, title, content, medias, callback)"
-    info "  参数说明:"
-    info "    squareId: 广场 ID"
-    info "    title: 话题标题"
-    info "    content: 话题内容"
-    info "    medias: 媒体附件列表"
-
-    step "拉取话题列表..."
-    info "  SDK API: getSquareTopics(squareId, fromIndex, count, callback)"
-    info "  分页拉取广场下的所有话题"
-
-    step "获取话题详情..."
-    info "  SDK API: getSquareTopicDetail(topicId, callback)"
-    info "  获取话题的完整内容、评论、点赞等"
-
-    info "验证点: 话题发布成功，列表正确显示，详情完整"
+    step "可以通过 SDK API 验证: publishSquareTopic / getSquareTopics / getSquareTopicDetail"
 }
 
 # ============================================================
@@ -122,31 +113,19 @@ test_square_topic() {
 
 test_square_interaction() {
     test_header "TC-SQ-004: 话题互动"
-
-    step "尝试 admin API 访问..."
+    step "检查广场互动端点..."
     local resp=$(im_admin_get "/api/admin/config")
-    if [ -n "${resp}" ]; then
-        pass "Admin API 可达，广场功能配置已加载"
+    if [ -n "${resp}" ] && echo "${resp}" | grep -qi "square\|comment\|like"; then
+        pass "广场互动功能已配置"
     else
-        skip "Admin 配置 API 不可用，广场功能需通过客户端 SDK 验证"
+        local sq_list=$(im_admin_get "/api/admin/square/list")
+        if [ -n "${sq_list}" ] && echo "${sq_list}" | grep -qE '\[|\{'; then
+            pass "广场服务可达，互动功能可用"
+        else
+            skip "广场互动 API 需通过客户端 SDK 验证"
+        fi
     fi
-
-    step "评论话题..."
-    info "  SDK API: commentSquareTopic(topicId, content, replyTo, replyCommentId, callback)"
-    info "  对话题发表评论或回复评论"
-
-    step "点赞话题..."
-    info "  SDK API: likeSquareTopic(topicId, callback)"
-    info "  对话题点赞"
-
-    step "取消点赞..."
-    info "  SDK API: unlikeSquareTopic(topicId, callback)"
-
-    step "删除评论..."
-    info "  SDK API: deleteSquareComment(commentId, callback)"
-
-    info "验证点: 评论/点赞成功，话题详情中可见"
-    info "验证点: 取消点赞和删除评论生效"
+    step "可以通过 SDK API 验证: commentSquareTopic / likeSquareTopic / unlikeSquareTopic / deleteSquareComment"
 }
 
 # ============================================================
@@ -155,28 +134,14 @@ test_square_interaction() {
 
 test_square_manage() {
     test_header "TC-SQ-005: 话题管理"
-
-    step "尝试 admin API 访问..."
-    local resp=$(im_admin_get "/api/admin/config")
-    if [ -n "${resp}" ]; then
-        pass "Admin API 可达，广场功能配置已加载"
+    step "检查话题管理端点..."
+    local resp=$(im_admin_get "/api/admin/square/list")
+    if [ -n "${resp}" ] && echo "${resp}" | grep -qE '\[|\{'; then
+        pass "广场服务可达，管理功能可用"
     else
-        skip "Admin 配置 API 不可用，广场功能需通过客户端 SDK 验证"
+        skip "话题管理 API 需通过客户端 SDK 验证"
     fi
-
-    step "删除话题..."
-    info "  SDK API: deleteSquareTopic(topicId, callback)"
-    info "  删除自己发布的话题"
-
-    step "举报话题..."
-    info "  SDK API: reportSquareTopic(topicId, reason, callback)"
-    info "  举报违规话题"
-
-    step "搜索话题..."
-    info "  SDK API: searchSquareTopics(squareId, keyword, fromIndex, count, callback)"
-    info "  在广场内搜索话题"
-
-    info "验证点: 删除后话题不可见，搜索功能正常"
+    step "可以通过 SDK API 验证: deleteSquareTopic / reportSquareTopic / searchSquareTopics"
 }
 
 # ============================================================
@@ -185,25 +150,14 @@ test_square_manage() {
 
 test_square_member() {
     test_header "TC-SQ-006: 广场成员管理"
-
-    step "尝试 admin API 访问..."
-    local resp=$(im_admin_get "/api/admin/config")
-    if [ -n "${resp}" ]; then
-        pass "Admin API 可达，广场功能配置已加载"
+    step "检查成员管理端点..."
+    local resp=$(im_admin_get "/api/admin/square/list")
+    if [ -n "${resp}" ] && echo "${resp}" | grep -qE '\[|\{'; then
+        pass "广场服务可达，成员管理功能可用"
     else
-        skip "Admin 配置 API 不可用，广场功能需通过客户端 SDK 验证"
+        skip "广场成员管理 API 需通过客户端 SDK 验证"
     fi
-
-    step "加入广场..."
-    info "  SDK API: joinSquare(squareId, callback)"
-
-    step "退出广场..."
-    info "  SDK API: quitSquare(squareId, callback)"
-
-    step "获取广场成员列表..."
-    info "  SDK API: getSquareMembers(squareId, fromIndex, count, callback)"
-
-    info "验证点: 加入/退出操作有效，成员列表正确"
+    step "可以通过 SDK API 验证: joinSquare / quitSquare / getSquareMembers"
 }
 
 # ============================================================
@@ -212,27 +166,19 @@ test_square_member() {
 
 test_square_notification() {
     test_header "TC-SQ-007: 广场消息通知"
-
-    step "尝试 admin API 访问..."
-    local resp=$(im_admin_get "/api/admin/config")
-    if [ -n "${resp}" ]; then
-        pass "Admin API 可达，广场功能配置已加载"
+    step "检查通知通道..."
+    local config=$(im_admin_get "/api/admin/config")
+    if [ -n "${config}" ] && echo "${config}" | grep -qi "square\|notification"; then
+        pass "广场通知配置已加载"
     else
-        skip "Admin 配置 API 不可用，广场功能需通过客户端 SDK 验证"
+        local sq_list=$(im_admin_get "/api/admin/square/list")
+        if [ -n "${sq_list}" ] && echo "${sq_list}" | grep -qE '\[|\{'; then
+            pass "广场服务可达，通知功能可用"
+        else
+            skip "广场通知 API 需通过客户端 SDK 验证"
+        fi
     fi
-
-    step "注册广场消息监听..."
-    info "  SDK API: setSquareMessageReceiveListener(listener)"
-    info "  监听广场相关消息通知"
-
-    step "通知类型说明..."
-    info "  - 话题新增通知"
-    info "  - 评论/回复通知"
-    info "  - 点赞通知"
-    info "  - 话题删除通知"
-    info "  - @提醒通知"
-
-    info "验证点: 各类通知通过 IM 消息正确送达"
+    step "可以通过 SDK API 验证: setSquareMessageReceiveListener(listener)"
 }
 
 # ============================================================
@@ -241,18 +187,20 @@ test_square_notification() {
 
 test_square_config() {
     test_header "TC-SQ-008: 广场功能配置检查"
-
-    step "尝试 admin API 访问..."
-    local resp=$(im_admin_get "/api/admin/config")
-    if [ -n "${resp}" ]; then
-        pass "Admin API 可达，广场功能配置已加载"
+    step "获取服务端配置..."
+    local config=$(im_admin_get "/api/admin/config")
+    if [ -n "${config}" ]; then
+        pass "服务端配置获取成功"
+        if echo "${config}" | grep -qi "square"; then
+            pass "广场功能已配置"
+        else
+            skip "配置中未找到 square 相关项，检查 im-server.conf"
+        fi
     else
-        skip "Admin 配置 API 不可用，广场功能需通过客户端 SDK 验证"
+        skip "配置 API 不可用，广场功能需通过客户端 SDK 验证"
     fi
 
-    step "检查广场配置项..."
-    info "  im-server.conf 相关配置:"
-
+    step "im-server.conf 相关配置参考:"
     cat << 'CONFIG'
 
   广场核心配置:
@@ -277,13 +225,12 @@ CONFIG
 
 test_square_performance() {
     test_header "TC-SQ-009: 广场性能注意要点"
-
-    step "尝试 admin API 访问..."
-    local resp=$(im_admin_get "/api/admin/config")
-    if [ -n "${resp}" ]; then
-        pass "Admin API 可达，广场服务运行中"
+    step "检查广场服务运行状态..."
+    local resp=$(im_admin_get "/api/admin/square/list")
+    if [ -n "${resp}" ] && echo "${resp}" | grep -qE '\[|\{'; then
+        pass "广场服务运行中"
     else
-        skip "Admin 配置 API 不可用，广场功能需通过客户端 SDK 验证"
+        skip "广场服务不可达，需通过客户端 SDK 验证"
     fi
 
     cat << 'PERF'

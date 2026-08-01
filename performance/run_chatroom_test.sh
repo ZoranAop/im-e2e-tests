@@ -25,11 +25,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/config.sh"
+source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
 
 # ============================================================
 # 测试参数
 # ============================================================
-MODE="${1:-check}"
+MODE="check"
+while [[ $# -gt 0 ]]; do case "$1" in -m|--mode) MODE="$2"; shift 2;; -h|--help) MODE="help"; shift;; *) shift;; esac; done
 CR_CORES="${CR_CORES:-8}"
 CR_SENDERS="${CR_SENDERS:-100}"
 CR_MSGS_PER_SENDER="${CR_MSGS_PER_SENDER:-100}"
@@ -108,7 +110,7 @@ test_chatroom_1000() {
 
     print_section "测试步骤指引"
 
-    cat << 'STEPS'
+    cat << STEPS
 
   操作步骤:
 
@@ -157,7 +159,7 @@ test_chatroom_2000() {
 
     print_section "测试步骤指引"
 
-    cat << 'STEPS'
+    cat << STEPS
 
   操作步骤:
 
@@ -206,7 +208,7 @@ test_chatroom_5000() {
 
     print_section "测试步骤指引"
 
-    cat << 'STEPS'
+    cat << STEPS
 
   操作步骤:
 

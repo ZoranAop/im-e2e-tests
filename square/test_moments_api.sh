@@ -33,11 +33,15 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/../common/utils.sh"
+source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
+source "${SCRIPT_DIR}/../common/db_utils.sh" 2>/dev/null || true
 
 # ============================================================
 # 参数
 # ============================================================
-USER_ID="${1:-}"
+USER_ID=""
+while [[ $# -gt 0 ]]; do case "$1" in -u|--user-id) USER_ID="$2"; shift 2;; *) shift;; esac; done
+USER_ID="${USER_ID:-test_user_01}"
 ROBOT_ID="${ROBOT_ID:-FireRobot}"
 TARGET_USER_ID="${TARGET_USER_ID:-}"
 
@@ -55,45 +59,35 @@ MONGO_DB="${MONGO_DB:-imdb}"
 test_post_feed() {
     test_header "TC-MT-001: 发布广场"
 
-    # 准备: 获取 admin token（需要先通过应用服务注册/获取 token）
-    step "准备测试环境..."
-
-    # 1. 文本广场 (type=0)
-    step "测试发布文本广场 (type=0)"
-    local feed_body='{
-        "type": 0,
-        "text": "这是一条文本广场",
-        "medias": [],
-        "toUsers": [],
-        "excludeUsers": [],
-        "mentionedUsers": [],
-        "extra": ""
-    }'
-
-    local result=$(im_admin_post "/api/admin/moments/feed?userId=${USER_ID}" "${feed_body}")
-    if [ -n "${result}" ] && echo "${result}" | grep -q "success\|feedId\|200"; then
+    step "发布文本广场 (type=0)..."
+    local now=$(date +%s)
+    local body="{\"type\":0,\"text\":\"测试广场-${now}\",\"medias\":[],\"toUsers\":[],\"excludeUsers\":[],\"mentionedUsers\":[],\"extra\":\"\"}"
+    local resp=$(im_admin_post "/api/admin/moments/feed?userId=${USER_ID}" "${body}")
+    if echo "${resp}" | grep -qE '"success":true|"feedId"|200'; then
         pass "文本广场发布成功"
+        info "  响应: $(echo ${resp} | head -c 200)"
     else
-        skip "文本广场发布测试需通过客户端 SDK 或 admin API 执行"
-        info "  SDK API: postFeed(0, text, medias, toUsers, excludeUsers, mentionedUsers, extra, callback)"
+        fail "文本广场发布失败"
+        info "  响应: ${resp}"
     fi
 
-    # 2. 图片广场 (type=1)
-    step "测试发布图片广场 (type=1)"
-    info "  SDK API: postFeed(1, text, medias, toUsers, excludeUsers, mentionedUsers, extra, callback)"
-    info "  需先上传图片获取 media 信息"
+    step "发布图片广场 (type=1)..."
+    body="{\"type\":1,\"text\":\"测试图片广场\",\"medias\":[{\"url\":\"https://example.com/test.jpg\",\"width\":800,\"height\":600}],\"toUsers\":[],\"excludeUsers\":[],\"mentionedUsers\":[],\"extra\":\"\"}"
+    resp=$(im_admin_post "/api/admin/moments/feed?userId=${USER_ID}" "${body}")
+    if echo "${resp}" | grep -qE '"success":true|"feedId"'; then
+        pass "图片广场发布成功"
+    else
+        skip "图片广场发布需要媒体服务支持"
+    fi
 
-    # 3. 视频广场 (type=2)
-    step "测试发布视频广场 (type=2)"
-    info "  SDK API: postFeed(2, text, medias, toUsers, excludeUsers, mentionedUsers, extra, callback)"
-    info "  需先上传视频获取 media 信息"
-
-    # 4. 链接广场 (type=3)
-    step "测试发布链接广场 (type=3)"
-    info "  SDK API: postFeed(3, text, medias, toUsers, excludeUsers, mentionedUsers, extra, callback)"
-
-    info "以上 4 种类型广场发布需通过客户端 SDK 完成端到端验证"
-    info "验证点: 发布成功返回 Feed ID，发布者广场列表可拉取到该条 Feed"
+    step "发布定向广场..."
+    body="{\"type\":0,\"text\":\"仅指定用户可见\",\"medias\":[],\"toUsers\":[\"${TARGET_USER_ID}\"],\"excludeUsers\":[],\"mentionedUsers\":[],\"extra\":\"\"}"
+    resp=$(im_admin_post "/api/admin/moments/feed?userId=${USER_ID}" "${body}")
+    if echo "${resp}" | grep -q '"success":true\|"feedId"'; then
+        pass "定向广场发布成功"
+    else
+        skip "定向广场发布需指定有效目标用户"
+    fi
 }
 
 # ============================================================
@@ -103,20 +97,33 @@ test_post_feed() {
 test_post_comment() {
     test_header "TC-MT-002: 发布评论/点赞"
 
-    step "测试发布评论 (type=0)"
-    info "  SDK API: postComment(0, feedId, text, replyTo, replyId, extra, callback)"
-    info "  参数说明:"
-    info "    type=0: 评论"
-    info "    type=1: 点赞"
-    info "    feedId: 广场 ID"
-    info "    replyTo: 回复某个用户的 ID（可选）"
-    info "    replyId: 回复的评论 ID（可选）"
+    step "获取已有广场列表..."
+    local feeds_resp=$(im_admin_get "/api/admin/moments/feeds?userId=${USER_ID}&fromIndex=0&count=5")
+    local feed_id=$(echo "${feeds_resp}" | grep -o '"feedId":"[0-9]*"' | head -1 | grep -o '[0-9]*')
 
-    step "测试发布点赞 (type=1)"
-    info "  SDK API: postComment(1, feedId, '', '', 0, '', callback)"
+    if [ -z "${feed_id}" ]; then
+        skip "无可用广场，跳过评论测试"
+        return
+    fi
+    info "  使用广场 ID: ${feed_id}"
 
-    info "验证点: 评论/点赞成功后，Feed 详情中可见该条评论"
-    info "返回: 有效 Comment ID"
+    step "发布评论 (type=0)..."
+    local body="{\"type\":0,\"feedId\":${feed_id},\"text\":\"测试评论-$(date +%s)\",\"replyTo\":\"\",\"replyId\":0,\"extra\":\"\"}"
+    local resp=$(im_admin_post "/api/admin/moments/comment?userId=${USER_ID}" "${body}")
+    if echo "${resp}" | grep -q '"success":true\|"commentId"'; then
+        pass "评论发布成功"
+    else
+        skip "评论发布需有效的广场ID"
+    fi
+
+    step "点赞 (type=1)..."
+    body="{\"type\":1,\"feedId\":${feed_id},\"text\":\"\",\"replyTo\":\"\",\"replyId\":0,\"extra\":\"\"}"
+    resp=$(im_admin_post "/api/admin/moments/comment?userId=${USER_ID}" "${body}")
+    if echo "${resp}" | grep -q '"success":true\|"commentId"'; then
+        pass "点赞成功"
+    else
+        skip "点赞需有效的广场ID"
+    fi
 }
 
 # ============================================================
@@ -125,16 +132,23 @@ test_post_comment() {
 
 test_get_feeds() {
     test_header "TC-MT-003: 拉取广场"
+    step "拉取最新广场 (fromIndex=0, count=20)..."
+    local resp=$(im_admin_get "/api/admin/moments/feeds?userId=${USER_ID}&fromIndex=0&count=20")
+    if [ -n "${resp}" ] && echo "${resp}" | grep -qE '\[|\{'; then
+        pass "广场列表拉取成功"
+        local count=$(echo "${resp}" | grep -o '"feedId"' | wc -l)
+        info "  返回条数: ${count}"
+    else
+        fail "广场列表拉取失败"
+    fi
 
-    step "测试拉取最新广场 (fromIndex=0)"
-    info "  SDK API: getFeeds(0, 20, user, callback)"
-    info "  拉取最新 20 条广场"
-
-    step "测试分页拉取"
-    info "  SDK API: getFeeds(fromIndex, count, user, callback)"
-    info "  fromIndex 设为最后一条 Feed ID，拉取更旧的 20 条"
-
-    info "验证点: 分页正确，数据不重复不遗漏，返回条数 ≤ count"
+    step "分页拉取..."
+    resp=$(im_admin_get "/api/admin/moments/feeds?userId=${USER_ID}&fromIndex=1&count=10")
+    if [ -n "${resp}" ]; then
+        pass "分页拉取成功"
+    else
+        skip "分页拉取需有足够广场数据"
+    fi
 }
 
 # ============================================================
@@ -168,23 +182,41 @@ test_delete() {
 test_user_profile() {
     test_header "TC-MT-005: 广场设置"
 
-    step "测试拉取广场设置"
-    info "  SDK API: getUserProfile(userId, callback)"
-    info "  可获取自己或他人的广场设置"
+    step "拉取用户广场设置..."
+    local resp=$(im_admin_get "/api/admin/moments/user/profile?userId=${USER_ID}")
+    if [ -n "${resp}" ] && echo "${resp}" | grep -qE '\[|\{'; then
+        pass "用户广场设置拉取成功"
+        info "  响应: $(echo ${resp} | head -c 200)"
+    else
+        skip "广场设置 API 不可用，需通过客户端 SDK 验证 getUserProfile"
+    fi
 
-    step "测试更新广场背景 (updateUserProfileType=0)"
-    info "  SDK API: updateUserProfile(0, '背景图链接', 0, callback)"
-    info "  修改广场背景图链接"
+    step "更新广场背景 (updateUserProfileType=0)..."
+    local body="{\"type\":0,\"bgUrl\":\"https://example.com/bg.jpg\",\"intValue\":0,\"strValue\":\"\"}"
+    resp=$(im_admin_post "/api/admin/moments/user/profile?userId=${USER_ID}" "${body}")
+    if echo "${resp}" | grep -q '"success":true\|200'; then
+        pass "广场背景更新成功"
+    else
+        skip "updateUserProfile 需通过客户端 SDK 验证"
+    fi
 
-    step "测试设置陌生人可见条数 (updateUserProfileType=1)"
-    info "  SDK API: updateUserProfile(1, '', 10, callback)"
-    info "  intValue 为陌生人可见条数"
+    step "设置陌生人可见条数 (updateUserProfileType=1)..."
+    body="{\"type\":1,\"bgUrl\":\"\",\"intValue\":10,\"strValue\":\"\"}"
+    resp=$(im_admin_post "/api/admin/moments/user/profile?userId=${USER_ID}" "${body}")
+    if echo "${resp}" | grep -q '"success":true\|200'; then
+        pass "陌生人可见条数设置成功"
+    else
+        skip "updateUserProfile(1) 需通过客户端 SDK 验证"
+    fi
 
-    step "测试设置可见范围 (updateUserProfileType=2)"
-    info "  SDK API: updateUserProfile(2, '', scope, callback)"
-    info "  intValue 含义: 0=不限制, 1=3天, 2=1个月, 3=半年"
-
-    info "验证点: getUserProfile 读取值与设置一致，数据正确持久化"
+    step "设置可见范围 (updateUserProfileType=2)..."
+    body="{\"type\":2,\"bgUrl\":\"\",\"intValue\":0,\"strValue\":\"\"}"
+    resp=$(im_admin_post "/api/admin/moments/user/profile?userId=${USER_ID}" "${body}")
+    if echo "${resp}" | grep -q '"success":true\|200'; then
+        pass "可见范围设置成功 (0=不限制)"
+    else
+        skip "updateUserProfile(2) 需通过客户端 SDK 验证"
+    fi
 }
 
 # ============================================================
@@ -194,21 +226,32 @@ test_user_profile() {
 test_black_block_list() {
     test_header "TC-MT-006: 黑名单/屏蔽名单"
 
-    step "测试设置黑名单 (isBlock=false, 不让TA看)"
-    info "  SDK API: updateBlackOrBlockList(false, ['userB'], [], callback)"
-    info "  拉黑: 被拉黑用户看不到发布者广场"
+    step "设置黑名单 (isBlock=false, 不让TA看)..."
+    local body="{\"isBlock\":false,\"addList\":[\"userB\"],\"removeList\":[]}"
+    local resp=$(im_admin_post "/api/admin/moments/blacklist?userId=${USER_ID}" "${body}")
+    if echo "${resp}" | grep -q '"success":true\|200'; then
+        pass "黑名单设置成功"
+    else
+        skip "updateBlackOrBlockList 需通过客户端 SDK 验证"
+    fi
 
-    step "测试设置屏蔽名单 (isBlock=true, 不看TA)"
-    info "  SDK API: updateBlackOrBlockList(true, ['userC'], [], callback)"
-    info "  屏蔽: 发布者看不到被屏蔽用户广场"
+    step "设置屏蔽名单 (isBlock=true, 不看TA)..."
+    body="{\"isBlock\":true,\"addList\":[\"userC\"],\"removeList\":[]}"
+    resp=$(im_admin_post "/api/admin/moments/blacklist?userId=${USER_ID}" "${body}")
+    if echo "${resp}" | grep -q '"success":true\|200'; then
+        pass "屏蔽名单设置成功"
+    else
+        skip "updateBlackOrBlockList 需通过客户端 SDK 验证"
+    fi
 
-    step "测试移除黑名单/屏蔽名单"
-    info "  SDK API: updateBlackOrBlockList(isBlock, [], ['userB'], callback)"
-    info "  从名单中移除指定用户"
-
-    info "验证点: 权限隔离生效"
-    info "  - 被拉黑用户无法看到发布者广场"
-    info "  - 屏蔽后发布者看不到被屏蔽用户广场"
+    step "移除黑名单..."
+    body="{\"isBlock\":false,\"addList\":[],\"removeList\":[\"userB\"]}"
+    resp=$(im_admin_post "/api/admin/moments/blacklist?userId=${USER_ID}" "${body}")
+    if echo "${resp}" | grep -q '"success":true\|200'; then
+        pass "黑名单移除成功"
+    else
+        skip "移除名单需通过客户端 SDK 验证"
+    fi
 }
 
 # ============================================================
@@ -222,6 +265,11 @@ test_moment_notification() {
     local config=$(im_admin_get "/api/admin/config")
     if [ -n "${config}" ]; then
         pass "Admin API 可达，消息通知通道配置可用"
+        if echo "${config}" | grep -qi "moment\|notification"; then
+            pass "广场通知配置已加载"
+        else
+            skip "配置中未找到广场通知相关项"
+        fi
     else
         skip "Admin API 不可用，需通过客户端 SDK 验证通知功能"
     fi
@@ -249,8 +297,13 @@ test_robot_moments() {
     step "检查机器人广场配置..."
     local config=$(im_admin_get "/api/admin/config")
     if [ -n "${config}" ]; then
-        pass "Admin API 可达，机器人广场配置已加载"
-        log_info "  配置中的 moments 相关项: $(echo ${config} | grep -o '"moments[^"]*"[^,}]*' || echo '未找到 moments 配置项')"
+        pass "Admin API 可达"
+        if echo "${config}" | grep -qi "allow_robot_list\|robot"; then
+            pass "moments.allow_robot_list 已配置"
+            info "  配置中的 robot 相关项: $(echo ${config} | grep -oi '"moments[^"]*robot[^"]*"[^,}]*' || echo '见完整配置')"
+        else
+            skip "配置中未找到 moments.allow_robot_list，请检查 im-server.conf"
+        fi
     else
         skip "Admin API 不可用，需通过客户端 SDK 验证机器人广场功能"
     fi

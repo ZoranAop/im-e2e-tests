@@ -26,11 +26,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/config.sh"
+source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
 
 # ============================================================
 # 测试参数
 # ============================================================
-MODE="${1:-check}"
+MODE="check"
+while [[ $# -gt 0 ]]; do case "$1" in -m|--mode) MODE="$2"; shift 2;; -h|--help) MODE="help"; shift;; *) shift;; esac; done
 REPORT_DIR="${REPORT_DIR:-${SCRIPT_DIR}/reports}"
 REPORT_FILE="${REPORT_DIR}/sc_$(date +%Y%m%d_%H%M%S).md"
 
@@ -86,7 +88,7 @@ test_sc_send() {
     # --- 4. 发送测试详解 ---
     print_section "4. 测试步骤"
 
-    cat << 'STEPS'
+    cat << STEPS
 
   操作步骤:
   
@@ -158,8 +160,29 @@ STEPS
 
 CRITERIA
 
-    # --- 7. 结果记录模板 ---
-    print_section "7. 测试结果记录"
+    # --- 7. 测试结论指引 ---
+    print_section "7. 测试结论指引"
+
+    cat << 'GUIDE'
+  脚本已执行环境检查。要完成完整的性能测试并得出 PASS/FAIL 判定，需：
+
+  1. 部署 stress-tool 并配置对应的 TOML 模板
+  2. 运行 stress-tool 进行压测
+  3. 将压测结果（发送速率、耗时、成功率）填入以下变量：
+     export MEASURED_RATE=    # 实测发送速率
+     export MEASURED_TIME=    # 实测发送时间
+     export MEASURED_SUCCESS= # 实测成功率(%)
+
+  4. 重新运行本脚本（含 --verify 参数）进行基准比对：
+     bash run_single_chat_test.sh --mode verify
+
+
+  脚本将自动调用 check_benchmark 给出 优秀/合格/不合格 判定。
+
+GUIDE
+
+    # --- 8. 结果记录模板 ---
+    print_section "8. 测试结果记录"
 
     local elapsed=$(elapsed_sec)
     log_timing "总计耗时" "${elapsed}s"
@@ -201,7 +224,7 @@ test_sc_recv() {
     # --- 3. 测试步骤 ---
     print_section "3. 测试步骤"
 
-    cat << 'STEPS'
+    cat << STEPS
 
   操作步骤:
 
@@ -337,6 +360,24 @@ main() {
             ;;
         full|--full|-f)
             test_sc_full
+            ;;
+        verify)
+            print_header "TC-SC-001 基准验证"
+            if [ -n "${MEASURED_RATE:-}" ]; then
+                log_metric "实测发送速率" "${MEASURED_RATE} 条/秒"
+                check_benchmark "${MEASURED_RATE}" "${BENCH_SC_SEND_RATE}" "发送速率基准"
+                if [ -n "${MEASURED_SUCCESS:-}" ]; then
+                    if [ "${MEASURED_SUCCESS}" = "100" ]; then
+                        log_pass "消息成功率: ${MEASURED_SUCCESS}%"
+                    else
+                        log_fail "消息成功率: ${MEASURED_SUCCESS}% (需100%)"
+                    fi
+                fi
+            else
+                log_fail "未设置 MEASURED_RATE 环境变量，无法进行基准比对"
+                log_info "设置方式: export MEASURED_RATE=19646"
+            fi
+            print_summary
             ;;
         *)
             echo "用法: $0 --mode <check|send|recv|full>"
