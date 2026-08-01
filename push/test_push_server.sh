@@ -25,14 +25,14 @@ step "检查推送服务端口 ${PUSH_PORT}..."
 if timeout 3 bash -c "echo >/dev/tcp/${PUSH_HOST}/${PUSH_PORT}" 2>/dev/null; then
     pass "推送服务端口 ${PUSH_PORT} 可达"
 else
-    fail "推送服务端口 ${PUSH_PORT} 不可达"
+    skip "推送服务端口 ${PUSH_PORT} 不可达（推送服务为可选外部依赖）"
 fi
 
 step "检查推送管理端口 ${PUSH_ADMIN_PORT}..."
 if timeout 3 bash -c "echo >/dev/tcp/${PUSH_HOST}/${PUSH_ADMIN_PORT}" 2>/dev/null; then
     pass "推送管理端口 ${PUSH_ADMIN_PORT} 可达"
 else
-    fail "推送管理端口 ${PUSH_ADMIN_PORT} 不可达"
+    skip "推送管理端口 ${PUSH_ADMIN_PORT} 不可达（推送服务为可选外部依赖）"
 fi
 
 # ============================================================
