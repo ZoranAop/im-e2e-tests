@@ -1,0 +1,88 @@
+# ============================================================
+# stress-tool 配置模板 - 群聊消息测试
+# ============================================================
+# 用法: 下载 stress-tool 工具后，将此配置替换 config.toml
+# ============================================================
+
+[IMConfig]
+Host = "YOUR_IM_SERVER_IP"
+HttpPort = 80
+AdminPort = 18080
+AdminSecret = 123456
+Lite = true
+MessageContent = "这是一个很短的文本内容！"
+
+# ============================================================
+# 方案一: 百人群测试 (TC-GC-100)
+#   - 50个发送者 + 49个普通成员 + 1个观察者 = 100人群
+#   - 100个群，发送20轮
+#   - 总消息: 50 × 100 × 20 = 100,000条
+#   - 总分发: 100,000 × 100 = 10,000,000次
+# ============================================================
+
+# [TestGroupMessageConfig]
+# Enable = true
+# SendUserPrefix = "U_"
+# SendUserCount = 50
+# SendUserStart = 0
+# CreateGroup = true
+# GroupPrefix = "G100_"
+# GroupCount = 100
+# GroutStart = 0
+# SendMessageInterval = 0
+# ReceiveUserPrefix = "RU_"
+# ReceiveUserCount = 49
+# ReceiveUserStart = 0
+# WatchUserList = ["YOUR_OBSERVER_USER_ID"]
+# SkipConfirm = true
+# Loop = 20
+
+# ============================================================
+# 方案二: 两百人群测试 (TC-GC-200)
+#   - 100个发送者 + 99个普通成员 + 1个观察者 = 200人群
+#   - 100个群，发送10轮
+#   - 总消息: 100 × 100 × 10 = 100,000条
+#   - 总分发: 100,000 × 200 = 20,000,000次
+# ============================================================
+
+# [TestGroupMessageConfig]
+# Enable = true
+# SendUserPrefix = "U_"
+# SendUserCount = 100
+# SendUserStart = 0
+# CreateGroup = true
+# GroupPrefix = "G200_"
+# GroupCount = 100
+# GroutStart = 0
+# SendMessageInterval = 0
+# ReceiveUserPrefix = "RU_"
+# ReceiveUserCount = 99
+# ReceiveUserStart = 0
+# WatchUserList = ["YOUR_OBSERVER_USER_ID"]
+# SkipConfirm = true
+# Loop = 10
+
+# ============================================================
+# 方案三: 千人群测试 (TC-GC-1000)
+#   - 100个发送者 + 899个普通成员 + 1个观察者 = 1000人群
+#   - 100个群，发送2轮
+#   - 总消息: 100 × 100 × 2 = 20,000条
+#   - 总分发: 20,000 × 1,000 = 20,000,000次
+# ============================================================
+
+[TestGroupMessageConfig]
+Enable = true
+SendUserPrefix = "U_"
+SendUserCount = 100
+SendUserStart = 0
+CreateGroup = true
+GroupPrefix = "G1000_"
+GroupCount = 100
+GroutStart = 0
+SendMessageInterval = 0
+ReceiveUserPrefix = "RU_"
+ReceiveUserCount = 899
+ReceiveUserStart = 0
+WatchUserList = ["YOUR_OBSERVER_USER_ID"]
+SkipConfirm = true
+Loop = 2

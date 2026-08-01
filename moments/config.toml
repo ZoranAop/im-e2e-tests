@@ -1,0 +1,56 @@
+# 朋友圈压力测试配置 (stress-tool)
+# 将此文件放到 stress-tool 同目录下，启动即可自动运行
+
+[IMConfig]
+Host = "IM_SERVER_PUBLIC_IP"
+HttpPort = 80
+AdminPort = 18080
+AdminSecret = "123456"
+Lite = true
+# 较短文本消息内容
+MessageContent = "这是一个朋友圈测试内容！"
+
+# ============================================================
+# 朋友圈发布测试
+# ============================================================
+[TestMomentsConfig]
+Enable = true
+
+# 测试发送用户前缀
+SendUserPrefix = "MU_"
+# 发送用户数量
+SendUserCount = 50
+# 用户 ID 起始数
+SendUserStart = 0
+
+# 朋友圈类型：0=文本, 1=图片, 2=视频, 3=链接
+FeedType = 0
+
+# 每轮发送间隔（毫秒）
+SendMessageInterval = 100
+
+# 是否跳过确认直接开始
+SkipConfirm = false
+
+# 循环次数
+# 发送总数 = SendUserCount × Loop
+Loop = 100
+
+# ============================================================
+# 评论/点赞测试
+# ============================================================
+[TestMomentsCommentConfig]
+Enable = true
+
+# 评论用户前缀
+CommentUserPrefix = "MC_"
+CommentUserCount = 20
+CommentUserStart = 0
+
+# 评论类型：0=评论, 1=点赞
+CommentType = 0
+
+# 对每个 Feed 发送的评论数
+CommentPerFeed = 5
+
+Loop = 20

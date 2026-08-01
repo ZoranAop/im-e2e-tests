@@ -1,0 +1,50 @@
+# ============================================================
+# stress-tool 配置模板 - 单聊消息测试
+# ============================================================
+# 用法: 下载 stress-tool 工具后，将此配置替换 config.toml
+# ============================================================
+
+# ---- 发送测试（接收方离线） ----
+# 修改下方配置后，执行: nohup ./stress-tool 2>&1 & tail -f nohup.out
+
+[IMConfig]
+Host = "YOUR_IM_SERVER_IP"
+HttpPort = 80
+AdminPort = 18080
+AdminSecret = 123456
+Lite = true
+MessageContent = "这是一个很短的文本内容！"
+
+[TestSingleMessageConfig]
+Enable = true
+SendUserPrefix = "U_"
+SendUserCount = 200
+SendUserStart = 0
+SendMessageInterval = 0
+ReceiveUserPrefix = "RU_"
+ReceiveUserCount = 999
+ReceiveUserStart = 0
+WatchUserList = ["YOUR_OBSERVER_USER_ID"]
+SkipConfirm = true
+Loop = 50
+
+# ---- 收发测试（接收方全部在线） ----
+# 收发测试需要 2 台压测机:
+#   发送机: 使用上述 [TestSingleMessageConfig] 配置（Lite = true）
+#   接收机: 使用下述 [TestLonglinkConfig] 配置（Lite = false）
+
+# [IMConfig]
+# Host = "YOUR_IM_SERVER_IP"
+# HttpPort = 80
+# AdminPort = 18080
+# AdminSecret = 123456
+# Lite = false
+# MessageContent = "这是一个很短的文本内容！"
+
+# [TestLonglinkConfig]
+# Enable = true
+# UserPrefix = "RU_"
+# UserCount = 999
+# UserStart = 0
+# ConnDuration = 1800000
+# SkipConfirm = true

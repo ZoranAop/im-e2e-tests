@@ -1,0 +1,60 @@
+# ============================================================
+# stress-tool 配置模板 - 聊天室消息测试
+# ============================================================
+# 用法: 下载 stress-tool 工具后，将配置替换 config.toml
+#
+# 聊天室测试需要 2 台压测机:
+#   接收机: 模拟聊天室成员加入（先启动）
+#   发送机: 模拟发送者在聊天室内发消息（后启动）
+#
+# 注意:
+#   - 聊天室使用内网 IP（手机用外网）
+#   - 接收机 Lite = false（接收消息）
+#   - 发送机 Lite = true（只发送）
+# ============================================================
+
+# ============================================================
+# A. 发送机配置（Lite = true，只发送）
+# ============================================================
+[IMConfig]
+Host = "YOUR_IM_SERVER_INTERNAL_IP"
+HttpPort = 80
+AdminPort = 18080
+AdminSecret = 123456
+Lite = true
+MessageContent = "这是一个很短的文本内容！"
+
+[TestChatroomConfig]
+Enable = true
+ChatroomId = "chatroom1"
+SendUserPrefix = "U_"
+SendUserCount = 100
+SendUserStart = 0
+SendMessageInterval = 10
+SkipConfirm = false
+Loop = 100
+
+# ============================================================
+# B. 接收机配置（Lite = false，接收消息）
+#    修改 ChatroomMemberCount 切换测试规模:
+#    - 1000 人  (TC-CR-1000)
+#    - 2000 人  (TC-CR-2000)
+#    - 5000 人  (TC-CR-5000)
+# ============================================================
+
+# [IMConfig]
+# Host = "YOUR_IM_SERVER_INTERNAL_IP"
+# HttpPort = 80
+# AdminPort = 18080
+# AdminSecret = 123456
+# Lite = false
+# MessageContent = "这是一个很短的文本内容！"
+
+# [TestChatroomConfig]
+# Enable = true
+# ChatroomId = "chatroom1"
+# ChatroomMemberPrefix = "RU_"
+# ChatroomMemberCount = 1000    # 改为 2000 / 5000 测试不同规模
+# ChatroomMemberStart = 0
+# SkipConfirm = true
+# ConnDuration = 1800
