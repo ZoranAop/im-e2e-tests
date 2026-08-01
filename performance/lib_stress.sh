@@ -49,6 +49,7 @@ launch_stress() {
     local config="$1" label="$2"
     local logfile="${STRESS_OUTPUT_DIR}/${label}_$(date +%Y%m%d_%H%M%S).log"
     mkdir -p "${STRESS_OUTPUT_DIR}"
+    STRESS_LOG_FILE=""
 
     if [ ! -f "${STRESS_TOOL}" ]; then
         log_skip "stress-tool not found at ${STRESS_TOOL}"
@@ -79,7 +80,7 @@ launch_stress() {
     
     wait "${STRESS_PID}" 2>/dev/null || true
     local exit_code=$?
-    echo "${logfile}"
+    STRESS_LOG_FILE="${logfile}"
     return ${exit_code}
 }
 
@@ -146,7 +147,9 @@ run_stress_test() {
     local config="${STRESS_CONFIG_DIR}/config_${label}.toml"
     
     render_toml "${template}" "${config}" || return 1
-    local logfile=$(launch_stress "${config}" "${label}" | tail -1) || true
+    launch_stress "${config}" "${label}"
+    local launch_rc=$?
+    local logfile="${STRESS_LOG_FILE:-}"
     if [ ! -f "${logfile}" ]; then
         return 1
     fi
@@ -156,9 +159,9 @@ run_stress_test() {
     local varfile="${STRESS_OUTPUT_DIR}/.stress_vars_$$"
     if [ -f "${varfile}" ]; then
         source "${varfile}"
-        rm -f "${varfile}"
+        rm -f "${varfile}" 2>/dev/null || true
     fi
     
     # Cleanup
-    rm -f "${config}"
+    rm -f "${config}" 2>/dev/null || true
 }

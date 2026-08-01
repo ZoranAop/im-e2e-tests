@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  syntax-and-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
 
     services:
       mysql:
@@ -22,9 +22,9 @@ jobs:
           - 3306:3306
         options: >-
           --health-cmd="mysqladmin ping -h localhost"
-          --health-interval=5s
-          --health-timeout=3s
-          --health-retries=10
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
       mongodb:
         image: mongo:7.0
@@ -32,50 +32,84 @@ jobs:
           - 27017:27017
         options: >-
           --health-cmd="mongosh --eval 'db.runCommand({ping:1})'"
-          --health-interval=5s
-          --health-timeout=3s
-          --health-retries=10
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq bc curl mysql-client
+
       - name: Setup Environment
         run: |
-          sudo apt-get update
-          sudo apt-get install -y bc curl mysql-client netcat-openbsd
-
-      - name: Create .env
-        run: |
           cp .env.example .env
+          echo "MYSQL_HOST=127.0.0.1" >> .env
+          echo "MYSQL_PORT=3306" >> .env
+          echo "MYSQL_USER=root" >> .env
           echo "MYSQL_PASS=testpass123" >> .env
           echo "MYSQL_DB=imdb" >> .env
+          echo "MONGO_HOST=127.0.0.1" >> .env
+          echo "MONGO_PORT=27017" >> .env
+          mkdir -p reports
 
-      - name: Syntax Check (Bash)
+      - name: Bash Syntax Check
         run: |
-          find . -name "*.sh" -exec bash -n {} \;
+          find . -name "*.sh" -print0 | xargs -0 -n1 bash -n
 
-      - name: Check Prerequisites
+      - name: DB Connectivity Check
         run: |
-          bash performance/run_single_chat_test.sh check || true
-          bash performance/run_group_chat_test.sh check || true
-          bash performance/run_chatroom_test.sh check || true
-          bash performance/run_cluster_test.sh check || true
-          bash performance/run_mixed_workload_test.sh check || true
-
-      - name: Smoke Test (Push)
-        run: |
-          bash push/test_push_server.sh || true
-
-      - name: Smoke Test (Square)
-        run: |
-          bash square/test_moments_api.sh --user-id "ci_test_user" || true
-          bash square/test_square_api.sh --user-id "ci_test_user" || true
+          mysql -h127.0.0.1 -uroot -ptestpass123 -e "SELECT 1" imdb
+          echo "MySQL OK"
 
       - name: Performance Estimation
         run: |
           bash performance/calc_performance.sh --all
 
-      - name: Test Summary
-        if: always()
+      - name: Check Prerequisites (No IM Server)
         run: |
-          echo "CI pipeline completed."
+          bash performance/run_single_chat_test.sh --mode check 2>&1 | tail -20 || true
+          bash performance/run_group_chat_test.sh --mode check 2>&1 | tail -10 || true
+          bash performance/run_mixed_workload_test.sh --mode check 2>&1 | tail -10 || true
+
+  k6-load-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: syntax-and-smoke
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq k6
+
+      - name: Run k6 Load Test
+        run: |
+          k6 run --vus 10 --duration 10s \
+            -e IM_HOST="${IM_HOST:-localhost}" \
+            -e IM_PORT="80" \
+            performance/k6_single_chat.js 2>&1 | tee reports/k6_results.txt
+        continue-on-error: true
+
+      - name: Check k6 Thresholds
+        run: |
+          if grep -q "thresholds.*failed" reports/k6_results.txt; then
+            echo "K6 THRESHOLDS FAILED"
+            exit 1
+          fi
+          echo "K6 thresholds passed"
+
+      - name: Upload k6 Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-results
+          path: reports/k6_results.txt

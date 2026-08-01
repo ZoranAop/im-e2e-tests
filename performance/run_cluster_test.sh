@@ -164,6 +164,7 @@ CONFIG
 cluster_test_node() {
     local nodes="$1"
     local test_id="$2"
+    local num="${nodes}"
 
     print_header "TC-${test_id} ${nodes} 节点集群性能测试"
 
@@ -275,6 +276,41 @@ STEPS
     # --- 6. 参考基准 ---
     print_section "6. 参考基准"
     print_cluster_benchmark_table "${nodes}"
+
+    print_section "自动执行集群压测"
+
+    if [ -f "${SCRIPT_DIR}/lib_stress.sh" ] && [ -f "./stress-tool" ]; then
+        log_info "检测到 stress-tool，自动执行集群压测（${num} 节点）..."
+        source "${SCRIPT_DIR}/lib_stress.sh"
+        local template="${SCRIPT_DIR}/stress_single_chat.toml"
+        if [ -f "${template}" ]; then
+            run_stress_test "${template}" "cl_${num}node"
+            if [ "${RATE:-0}" != "0" ]; then
+                local core_rate=$(float_div "${RATE}" "$((num * 4))" "2")
+                log_metric "实测吞吐量" "${RATE} 条/秒"
+                log_metric "实测单核速率" "${core_rate} 条/秒/核"
+                
+                case "${num}" in
+                    1) check_benchmark "${RATE}" "${BENCH_CL_1_TPUT}" "单节点吞吐量";;
+                    2) check_benchmark "${RATE}" "${BENCH_CL_2_TPUT}" "双节点吞吐量";;
+                    3) check_benchmark "${RATE}" "${BENCH_CL_3_TPUT}" "三节点吞吐量";;
+                    4) check_benchmark "${RATE}" "${BENCH_CL_4_TPUT}" "四节点吞吐量";;
+                esac
+                assert_success_rate "${SUCCESS:-0}" "集群消息成功率"
+                
+                if declare -f count_all_messages &>/dev/null; then
+                    local expected_msgs=$((CL_SENDERS * CL_RECEIVERS * CL_ROUNDS))
+                    local db_count=$(count_all_messages 2>/dev/null || echo "0")
+                    if [ "${db_count}" != "0" ]; then
+                        assert_ge "${db_count}" "${expected_msgs}" "集群落库数"
+                    fi
+                fi
+            fi
+        fi
+    else
+        log_skip "stress-tool 未安装，跳过自动压测"
+        log_info "手动压测后验证: export MEASURED_RATE=... && bash $0 --mode verify"
+    fi
 
     # --- 7. 性能模型 ---
     print_section "7. RPC 性能模型与扩展公式"
@@ -391,6 +427,17 @@ main() {
             ;;
         4)
             cluster_test_node 4 "CL-004"
+            ;;
+        verify)
+            print_header "集群性能基准验证"
+            if [ -n "${MEASURED_RATE:-}" ]; then
+                check_benchmark "${MEASURED_RATE}" "${BENCH_CL_1_TPUT}" "集群吞吐量"
+                assert_success_rate "${MEASURED_SUCCESS:-0}" "消息成功率"
+            else
+                log_fail "未提供实测数据"
+                log_info "  export MEASURED_RATE=6537 && bash $0 --mode verify"
+            fi
+            print_summary
             ;;
         *)
             echo "用法: $0 --mode <check|1|2|3|4>"
