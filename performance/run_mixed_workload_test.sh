@@ -28,7 +28,7 @@ PROFILE_TYPICAL_CHATROOM="${MX_CHATROOM_PCT:-5}"
 # --- Workload Profile 2: Group-Heavy ---
 # 30% single chat, 60% group chat, 10% chatroom
 PROFILE_GROUP_SINGLE="30"
-PROFILE_GROUP_GROUP="60"  
+PROFILE_GROUP_HEAVY_GROUP="60"  
 PROFILE_GROUP_CHATROOM="10"
 
 # --- Total target msg rate ---

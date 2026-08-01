@@ -89,7 +89,7 @@ switch ($Mode) {
     "check" {
         Write-TestHeader "单聊消息测试 - 环境检查"
         $version = Invoke-ImAdminApi -Path "/api/version"
-        Assert-HttpOk $version "IM 服务可达"
+        if ($version) { Write-Pass "IM 服务可达" } else { Write-Fail "IM 服务不可达" }
     }
     "send" { Test-SCSend }
     "recv" { Test-SCRecv }

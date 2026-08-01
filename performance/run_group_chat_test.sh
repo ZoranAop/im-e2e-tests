@@ -119,7 +119,7 @@ test_group_100() {
     local expected_observer_msgs=$((rounds * groups))
 
     print_group_test_result_table \
-        100 100 50 49 1 20 100000 "$((20 * 100))"
+        100 100 50 49 1 20 "$total_msgs" "$expected_observer_msgs"
 
     # --- 环境检查 ---
     if ! check_prerequisites; then

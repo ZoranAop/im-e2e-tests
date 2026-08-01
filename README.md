@@ -295,6 +295,9 @@ k6 run -e IM_HOST=<host> -e IM_PORT=80 performance/k6_single_chat.js
 6. 测试用户已在 IM 服务中注册
 7. 压测需要 `stress-tool` 压测工具
 
+> stress-tool 为外部压测工具，需由环境提供。自动驱动模式(--mode send/recv)依赖该工具；
+> 无 stress-tool 时可使用 --mode verify 模式喂入实测值进行基准比对。
+
 ## 通用工具函数
 
 `common/` 目录提供可复用的测试基础设施：

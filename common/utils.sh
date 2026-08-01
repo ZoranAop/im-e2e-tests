@@ -71,37 +71,40 @@ info() {
     echo -e "${GRAY}INFO: $1${NC}"
 }
 
+# Timer functions (minimal stubs for standalone usage)
+start_timer() { TEST_START_TIME=$(date +%s%3N); }
+elapsed_ms() { echo $(($(date +%s%3N) - ${TEST_START_TIME:-0})); }
+elapsed_sec() { echo $(($(elapsed_ms) / 1000)); }
+TEST_START_TIME=$(date +%s%3N)
+
 # ============================================================
 # HTTP 请求
 # ============================================================
 im_admin_api() {
-    local path="$1"
-    local method="${2:-GET}"
-    local body="$3"
-    local curl_opts="-s -X ${method}"
-
-    curl_opts="${curl_opts} -H 'Content-Type: application/json'"
-    curl_opts="${curl_opts} -H 'nonce: '${RANDOM}"
-    curl_opts="${curl_opts} -H 'timestamp: '$(date +%s%3N)"
-
+    local path="$1" method="${2:-GET}" body="$3"
+    local nonce=$RANDOM timestamp=$(date +%s%3N)
+    local url="${IM_ADMIN_URL}${path}"
     if [ -n "${body}" ]; then
-        curl_opts="${curl_opts} -d '${body}'"
+        curl -s -X "${method}" -H "Content-Type: application/json" \
+            -H "nonce: ${nonce}" -H "timestamp: ${timestamp}" \
+            -d "${body}" "${url}" 2>/dev/null || echo ""
+    else
+        curl -s -X "${method}" -H "Content-Type: application/json" \
+            -H "nonce: ${nonce}" -H "timestamp: ${timestamp}" \
+            "${url}" 2>/dev/null || echo ""
     fi
-
-    eval "curl ${curl_opts} '${IM_ADMIN_URL}${path}'" 2>/dev/null || echo ""
 }
 
 push_api() {
-    local path="$1"
-    local method="${2:-GET}"
-    local body="$3"
-    local curl_opts="-s -X ${method} -H 'Content-Type: application/json'"
-
+    local path="$1" method="${2:-GET}" body="$3"
+    local url="${PUSH_URL}${path}"
     if [ -n "${body}" ]; then
-        curl_opts="${curl_opts} -d '${body}'"
+        curl -s -X "${method}" -H "Content-Type: application/json" \
+            -d "${body}" "${url}" 2>/dev/null || echo ""
+    else
+        curl -s -X "${method}" -H "Content-Type: application/json" \
+            "${url}" 2>/dev/null || echo ""
     fi
-
-    eval "curl ${curl_opts} '${PUSH_URL}${path}'" 2>/dev/null || echo ""
 }
 
 # ============================================================

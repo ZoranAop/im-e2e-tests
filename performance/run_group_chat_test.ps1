@@ -62,7 +62,7 @@ switch ($GroupSize) {
     "check" {
         Write-TestHeader "群聊消息测试 - 环境检查"
         $version = Invoke-ImAdminApi -Path "/api/version"
-        Assert-HttpOk $version "IM 服务可达"
+        if ($version) { Write-Pass "IM 服务可达" } else { Write-Fail "IM 服务不可达" }
     }
     100 {
         Test-GroupChat -Size 100 -Groups 100 -Senders 50 -NormalMembers 49 -Observers 1 -Rounds 20
