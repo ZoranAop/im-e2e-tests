@@ -168,8 +168,8 @@ test_long_connection_check() {
 
 GUIDE
 
-    # --- 6. 数据库校验指引 ---
-    print_section "6. 数据库校验指引"
+    # --- 7. 数据库校验指引 ---
+    print_section "7. 数据库校验指引"
     cat << 'DBCHECK'
   压测完成后，验证 MySQL 连接数为 0:
     SELECT COUNT(*) FROM information_schema.processlist WHERE USER != 'root';
