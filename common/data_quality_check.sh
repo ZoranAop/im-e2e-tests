@@ -13,6 +13,19 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if ! declare -f log_pass &>/dev/null; then
+    if [ -f "${SCRIPT_DIR}/../performance/config.sh" ]; then
+        source "${SCRIPT_DIR}/../performance/config.sh"
+    fi
+fi
+if ! declare -f count_all_messages &>/dev/null; then
+    if [ -f "${SCRIPT_DIR}/db_utils.sh" ]; then
+        source "${SCRIPT_DIR}/db_utils.sh"
+    fi
+fi
+
 # Check message count integrity across DB shards
 validate_message_count() {
     local expected="$1" test_name="$2"

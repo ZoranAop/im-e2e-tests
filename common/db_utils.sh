@@ -4,9 +4,12 @@
 
 set -euo pipefail
 
-if declare -f log_pass &>/dev/null; then true
-elif [ -f "$(dirname "$0")/../performance/config.sh" ]; then
-    source "$(dirname "$0")/../performance/config.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if ! declare -f log_pass &>/dev/null; then
+    if [ -f "${SCRIPT_DIR}/../performance/config.sh" ]; then
+        source "${SCRIPT_DIR}/../performance/config.sh"
+    fi
 fi
 
 MYSQL_HOST="${MYSQL_HOST:-localhost}"

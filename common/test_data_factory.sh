@@ -9,6 +9,14 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if ! declare -f log_pass &>/dev/null; then
+    if [ -f "${SCRIPT_DIR}/../performance/config.sh" ]; then
+        source "${SCRIPT_DIR}/../performance/config.sh"
+    fi
+fi
+
 generate_user_prefix() {
     local scenario="$1"
     case "${scenario}" in
