@@ -19,13 +19,12 @@ test-scripts/
 │   ├── stress-tool_single_chat.toml     # stress-tool 单聊消息测试配置模板
 │   ├── stress-tool_group_chat.toml      # stress-tool 群聊消息测试配置模板
 │   └── stress-tool_chatroom.toml        # stress-tool 聊天室消息测试配置模板
-├── moments/                           # 朋友圈功能测试
-│   ├── test_moments_api.ps1           # 朋友圈功能测试（PowerShell）
-│   ├── test_moments_api.sh            # 朋友圈功能测试（Bash）
-│   └── config.toml                    # stress-tool 朋友圈压测配置
 ├── square/                            # 广场功能测试
-│   ├── test_square_api.ps1            # 广场功能测试（PowerShell）
-│   └── test_square_api.sh             # 广场功能测试（Bash）
+│   ├── test_square_api.ps1            # 广场话题功能测试（PowerShell）
+│   ├── test_square_api.sh             # 广场话题功能测试（Bash）
+│   ├── test_moments_api.ps1           # 广场动态功能测试（PowerShell）
+│   ├── test_moments_api.sh            # 广场动态功能测试（Bash）
+│   └── config.toml                    # stress-tool 广场压测配置
 ├── push/                              # 推送服务测试
 │   ├── test_push_server.ps1           # 推送服务测试（PowerShell）
 │   └── test_push_server.sh            # 推送服务测试（Bash）
@@ -48,7 +47,7 @@ test-scripts/
 | `MYSQL_HOST` | `localhost` | MySQL 地址 |
 | `MYSQL_USER` | `root` | MySQL 用户名 |
 | `MYSQL_PASS` | `` | MySQL 密码 |
-| `MONGO_HOST` | `localhost` | MongoDB 地址（朋友圈） |
+| `MONGO_HOST` | `localhost` | MongoDB 地址（广场） |
 | `MONGO_PORT` | `27017` | MongoDB 端口 |
 
 ## 快速开始
@@ -91,10 +90,10 @@ bash performance/calc_performance.sh --custom       # 自定义估算
 
 # ===== 功能测试 =====
 
-# 朋友圈功能测试
-bash moments/test_moments_api.sh --user-id "your_user_id"
+# 广场动态功能测试
+bash square/test_moments_api.sh --user-id "your_user_id"
 
-# 广场功能测试
+# 广场话题功能测试
 bash square/test_square_api.sh --user-id "your_user_id"
 
 # 推送服务测试
@@ -108,10 +107,10 @@ bash push/test_push_server.sh
 $env:IM_HOST = "192.168.1.100"
 $env:PUSH_HOST = "192.168.1.101"
 
-# 朋友圈功能测试
-.\moments\test_moments_api.ps1 -TestUserId "your_user_id"
+# 广场动态功能测试
+.\square\test_moments_api.ps1 -TestUserId "your_user_id"
 
-# 广场功能测试
+# 广场话题功能测试
 .\square\test_square_api.ps1 -TestUserId "your_user_id"
 
 # 推送服务测试
@@ -158,14 +157,14 @@ nohup ./stress-tool 2>&1 & tail -f nohup.out
 
 | 编号 | 场景 | 脚本 | 说明 |
 |------|------|------|------|
-| TC-MT-001 | 发布朋友圈 | `test_moments_api.sh` | 文本/图片/视频/链接 4 种类型 |
+| TC-MT-001 | 发布广场 | `test_moments_api.sh` | 文本/图片/视频/链接 4 种类型 |
 | TC-MT-002 | 发布评论/点赞 | `test_moments_api.sh` | 评论和点赞功能 |
-| TC-MT-003 | 拉取朋友圈 | `test_moments_api.sh` | 分页拉取和最新拉取 |
-| TC-MT-004 | 删除朋友圈/评论 | `test_moments_api.sh` | 删除后二次确认 |
-| TC-MT-005 | 朋友圈设置 | `test_moments_api.sh` | 背景图/可见条数/可见范围 |
+| TC-MT-003 | 拉取广场 | `test_moments_api.sh` | 分页拉取和最新拉取 |
+| TC-MT-004 | 删除广场/评论 | `test_moments_api.sh` | 删除后二次确认 |
+| TC-MT-005 | 广场设置 | `test_moments_api.sh` | 背景图/可见条数/可见范围 |
 | TC-MT-006 | 黑名单/屏蔽名单 | `test_moments_api.sh` | 权限隔离验证 |
-| TC-MT-007 | 朋友圈消息通知 | `test_moments_api.sh` | line=1 通道消息监听 |
-| TC-MT-008 | 机器人朋友圈 | `test_moments_api.sh` | 全局/普通机器人行为 |
+| TC-MT-007 | 广场消息通知 | `test_moments_api.sh` | line=1 通道消息监听 |
+| TC-MT-008 | 机器人广场 | `test_moments_api.sh` | 全局/普通机器人行为 |
 | TC-SQ-001 | 广场服务连通性 | `test_square_api.sh` | IM 服务可达检查 |
 | TC-SQ-002 | 广场信息查询 | `test_square_api.sh` | 广场列表/详情 |
 | TC-SQ-003 | 话题发布与浏览 | `test_square_api.sh` | 发布/列表/详情 |
@@ -206,7 +205,7 @@ nohup ./stress-tool 2>&1 & tail -f nohup.out
 
 1. IM 服务已部署并可访问（HTTP 80 / Admin 18080）
 2. MySQL 已配置并可达
-3. 朋友圈测试需要：
+3. 广场测试需要：
    - 专业版 IM 服务
    - MongoDB 已配置
    - `moments.global_visible` 等配置项已设置

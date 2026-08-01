@@ -1,4 +1,4 @@
-# 朋友圈压力测试配置 (stress-tool)
+# 广场压力测试配置 (stress-tool)
 # 将此文件放到 stress-tool 同目录下，启动即可自动运行
 
 [IMConfig]
@@ -8,10 +8,10 @@ AdminPort = 18080
 AdminSecret = "123456"
 Lite = true
 # 较短文本消息内容
-MessageContent = "这是一个朋友圈测试内容！"
+MessageContent = "这是一个广场测试内容！"
 
 # ============================================================
-# 朋友圈发布测试
+# 广场发布测试
 # ============================================================
 [TestMomentsConfig]
 Enable = true
@@ -23,7 +23,7 @@ SendUserCount = 50
 # 用户 ID 起始数
 SendUserStart = 0
 
-# 朋友圈类型：0=文本, 1=图片, 2=视频, 3=链接
+# 广场类型：0=文本, 1=图片, 2=视频, 3=链接
 FeedType = 0
 
 # 每轮发送间隔（毫秒）

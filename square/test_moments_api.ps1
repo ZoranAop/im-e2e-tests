@@ -1,9 +1,9 @@
-# 朋友圈功能测试脚本
-# 测试 IM 服务朋友圈 SDK API 的 HTTP 层连通性和基本功能
+# 广场功能测试脚本
+# 测试 IM 服务广场 SDK API 的 HTTP 层连通性和基本功能
 # 
 # 前置条件:
 #   1. IM 服务已部署并配置 MongoDB
-#   2. 朋友圈配置已在 im-server.conf 中设置
+#   2. 广场配置已在 im-server.conf 中设置
 #   3. 至少有一个测试用户已注册并登录
 #
 # 用法:
@@ -25,7 +25,7 @@ $ErrorActionPreference = "Stop"
 # 环境检查
 # ============================================================
 
-Write-TestHeader "IM 服务朋友圈功能测试"
+Write-TestHeader "IM 服务广场功能测试"
 
 Write-Step "检查 IM 服务连通性..."
 $version = Invoke-ImAdminApi -Path "/api/version"
@@ -43,16 +43,16 @@ if ($null -eq $health) {
 }
 
 # ============================================================
-# TC-MT-001: 发布朋友圈
+# TC-MT-001: 发布广场
 # ============================================================
 
-Write-TestHeader "TC-MT-001: 发布朋友圈"
+Write-TestHeader "TC-MT-001: 发布广场"
 
-Write-Step "测试发布文本类型朋友圈 (type=0)..."
+Write-Step "测试发布文本类型广场 (type=0)..."
 $feedBody = @{
     userId       = $TestUserId
     type         = 0
-    text         = "这是一条测试朋友圈文本 - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+    text         = "这是一条测试广场文本 - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     medias       = @()
     toUsers      = @()
     excludeUsers = @()
@@ -60,22 +60,22 @@ $feedBody = @{
     extra        = ""
 }
 $response = Invoke-ImAdminApi -Path "/api/admin/moments/feed" -Method "POST" -Body $feedBody
-if (Assert-HttpOk $response "文本朋友圈发布") {
+if (Assert-HttpOk $response "文本广场发布") {
     $feedId = $response.feedId
     Assert-NotNull $feedId "返回有效 Feed ID"
 }
 
-Write-Step "测试发布图片类型朋友圈 (type=1)..."
+Write-Step "测试发布图片类型广场 (type=1)..."
 $feedBody.type = 1
 $feedBody.medias = @(@{ url = "https://example.com/test.jpg"; width = 800; height = 600 })
 $response = Invoke-ImAdminApi -Path "/api/admin/moments/feed" -Method "POST" -Body $feedBody
-Assert-HttpOk $response "图片朋友圈发布"
+Assert-HttpOk $response "图片广场发布"
 
-Write-Step "测试发布定向朋友圈..."
+Write-Step "测试发布定向广场..."
 $feedBody.type = 0
 $feedBody.toUsers = @($TargetUserId)
 $response = Invoke-ImAdminApi -Path "/api/admin/moments/feed" -Method "POST" -Body $feedBody
-Assert-HttpOk $response "定向朋友圈发布（指定接收用户）"
+Assert-HttpOk $response "定向广场发布（指定接收用户）"
 
 # ============================================================
 # TC-MT-002: 发布评论/点赞
@@ -84,13 +84,13 @@ Assert-HttpOk $response "定向朋友圈发布（指定接收用户）"
 Write-TestHeader "TC-MT-002: 发布评论与点赞"
 
 Write-Step "查找测试用 Feed..."
-# 拉取用户朋友圈获取 Feed ID
+# 拉取用户广场获取 Feed ID
 $feeds = Invoke-ImAdminApi -Path "/api/admin/moments/feeds?userId=$TestUserId&count=5"
 if ($null -ne $feeds -and $feeds.Count -gt 0) {
     $targetFeedId = $feeds[0].feedId
     Write-Info "使用 Feed ID: $targetFeedId"
 } else {
-    Write-Skip "无可用 Feed，跳过评论测试（请先发布朋友圈）"
+    Write-Skip "无可用 Feed，跳过评论测试（请先发布广场）"
 }
 
 if ($targetFeedId) {
@@ -125,21 +125,21 @@ if ($targetFeedId) {
 }
 
 # ============================================================
-# TC-MT-003: 拉取朋友圈
+# TC-MT-003: 拉取广场
 # ============================================================
 
-Write-TestHeader "TC-MT-003: 拉取朋友圈"
+Write-TestHeader "TC-MT-003: 拉取广场"
 
-Write-Step "拉取最新朋友圈 (fromIndex=0, count=20)..."
+Write-Step "拉取最新广场 (fromIndex=0, count=20)..."
 $response = Invoke-ImAdminApi -Path "/api/admin/moments/feeds?userId=$TestUserId&count=20"
-if (Assert-HttpOk $response "拉取最新朋友圈") {
+if (Assert-HttpOk $response "拉取最新广场") {
     Assert-NotNull $response "返回 Feed 列表"
     if ($null -ne $response.Count) {
         Write-Info "返回 $($response.Count) 条 Feed"
     }
 }
 
-Write-Step "分页拉取更旧朋友圈..."
+Write-Step "分页拉取更旧广场..."
 if ($null -ne $response -and $null -ne $response[-1] -and $null -ne $response[-1].feedId) {
     $lastFeedId = $response[-1].feedId
     $page2 = Invoke-ImAdminApi -Path "/api/admin/moments/feeds?userId=$TestUserId&count=20&fromIndex=$lastFeedId"
@@ -147,18 +147,18 @@ if ($null -ne $response -and $null -ne $response[-1] -and $null -ne $response[-1
 }
 
 # ============================================================
-# TC-MT-005: 朋友圈设置
+# TC-MT-005: 广场设置
 # ============================================================
 
-Write-TestHeader "TC-MT-005: 朋友圈设置"
+Write-TestHeader "TC-MT-005: 广场设置"
 
-Write-Step "获取朋友圈设置..."
+Write-Step "获取广场设置..."
 $profile = Invoke-ImAdminApi -Path "/api/admin/moments/profile?userId=$TestUserId"
-if (Assert-HttpOk $profile "获取朋友圈设置") {
+if (Assert-HttpOk $profile "获取广场设置") {
     Write-Info "当前设置: $($profile | ConvertTo-Json -Compress)"
 }
 
-Write-Step "更新朋友圈背景图 (type=0)..."
+Write-Step "更新广场背景图 (type=0)..."
 $body = @{ userId = $TestUserId; type = 0; strValue = "https://example.com/bg.jpg"; intValue = 0 }
 $response = Invoke-ImAdminApi -Path "/api/admin/moments/profile" -Method "POST" -Body $body
 Assert-HttpOk $response "更新背景图"
@@ -208,9 +208,9 @@ Assert-HttpOk $response "添加屏蔽名单"
 # 配置验证
 # ============================================================
 
-Write-TestHeader "朋友圈服务端配置验证"
+Write-TestHeader "广场服务端配置验证"
 
-# 检查朋友圈相关配置项
+# 检查广场相关配置项
 Write-Step "验证 moments.global_visible 配置..."
 # 尝试获取服务端配置（取决于 IM 服务是否暴露此接口）
 $config = Invoke-ImAdminApi -Path "/api/admin/config"

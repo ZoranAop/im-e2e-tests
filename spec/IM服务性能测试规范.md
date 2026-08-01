@@ -440,37 +440,37 @@ N 节点集群吞吐量 ≈ 单节点吞吐量 × (1 + (N-1) × 0.5)
 
 ---
 
-### 3.6 朋友圈功能测试
+### 3.6 广场功能测试
 
 #### 3.6.1 前置条件
 - 专业版 IM 服务已部署并配置 MongoDB。
 - `im-server.conf` 中 MongoDB 连接已配置。
-- 朋友圈配置项已正确设置。
+- 广场配置项已正确设置。
 
 #### 3.6.2 IM 服务端配置
 
 ```properties
-## MongoDB 连接（朋友圈数据存储，专业版必配）
+## MongoDB 连接（广场数据存储，专业版必配）
 ## 标准 URI 格式：mongodb://user:password@host:port/database
 
-## 朋友圈是否全局可见。全局可见时用户可看到所有人的朋友圈（黑名单除外）
+## 广场是否全局可见。全局可见时用户可看到所有人的广场（黑名单除外）
 moments.global_visible false
 
-## 允许朋友圈功能的机器人列表，多个以英文逗号分割
+## 允许广场功能的机器人列表，多个以英文逗号分割
 moments.allow_robot_list FireRobot,Helpers
 
-## 当朋友圈非全局可见时，机器人朋友圈是否全局可见
+## 当广场非全局可见时，机器人广场是否全局可见
 moments.robot_global_visible true
 ```
 
 #### 3.6.3 测试用例
 
-##### TC-MT-001 发布朋友圈
+##### TC-MT-001 发布广场
 
 | 参数 | 值 |
 |------|-----|
 | 测试方法 | 调用 `postFeed` API，分别测试文本(0)、图片(1)、视频(2)、链接(3)四种类型 |
-| 验证点 | 发布成功，返回 Feed ID；发布者朋友圈列表可拉取到该条 Feed |
+| 验证点 | 发布成功，返回 Feed ID；发布者广场列表可拉取到该条 Feed |
 | 成功标准 | 返回有效 Feed ID，无异常 |
 
 ##### TC-MT-002 发布评论/点赞
@@ -481,7 +481,7 @@ moments.robot_global_visible true
 | 验证点 | 评论/点赞成功后，Feed 详情中可见该条评论 |
 | 成功标准 | 返回有效 Comment ID |
 
-##### TC-MT-003 拉取朋友圈
+##### TC-MT-003 拉取广场
 
 | 参数 | 值 |
 |------|-----|
@@ -489,7 +489,7 @@ moments.robot_global_visible true
 | 验证点 | 分页正确，数据不重复不遗漏 |
 | 成功标准 | 返回 Feed 列表，条数 ≤ count |
 
-##### TC-MT-004 删除朋友圈/评论
+##### TC-MT-004 删除广场/评论
 
 | 参数 | 值 |
 |------|-----|
@@ -497,7 +497,7 @@ moments.robot_global_visible true
 | 验证点 | 删除后拉取不到该 Feed/评论 |
 | 成功标准 | 返回成功，二次拉取确认已删除 |
 
-##### TC-MT-005 朋友圈设置
+##### TC-MT-005 广场设置
 
 | 参数 | 值 |
 |------|-----|
@@ -510,10 +510,10 @@ moments.robot_global_visible true
 | 参数 | 值 |
 |------|-----|
 | 测试方法 | `updateBlackOrBlockList(isBlock=false)` 设置黑名单（不让 TA 看）；`isBlock=true` 设置屏蔽名单（不看 TA） |
-| 验证点 | 被拉黑用户无法看到发布者朋友圈；屏蔽后发布者看不到被屏蔽用户朋友圈 |
+| 验证点 | 被拉黑用户无法看到发布者广场；屏蔽后发布者看不到被屏蔽用户广场 |
 | 成功标准 | 权限隔离生效 |
 
-##### TC-MT-007 朋友圈消息通知
+##### TC-MT-007 广场消息通知
 
 | 参数 | 值 |
 |------|-----|
@@ -521,17 +521,17 @@ moments.robot_global_visible true
 | 验证点 | @消息和评论消息通过 IM 消息 line=1 通道送达；删除时收到撤回通知 |
 | 成功标准 | 监听器正确收到对应类型消息 |
 
-##### TC-MT-008 机器人朋友圈
+##### TC-MT-008 机器人广场
 
 | 参数 | 值 |
 |------|-----|
-| 测试方法 | 以 `moments.allow_robot_list` 中配置的机器人身份发布朋友圈 |
-| 验证点 | `moments.robot_global_visible=true` 时，机器人朋友圈分发给所有用户；`false` 时仅好友可见 |
+| 测试方法 | 以 `moments.allow_robot_list` 中配置的机器人身份发布广场 |
+| 验证点 | `moments.robot_global_visible=true` 时，机器人广场分发给所有用户；`false` 时仅好友可见 |
 | 成功标准 | 分发范围与配置一致 |
 | 注意事项 | 全局机器人发送时，系统内用户数量庞大时需关注服务端压力 |
 
-#### 3.6.4 朋友圈数据存储
-- 朋友圈数据存储在 MongoDB 中。
+#### 3.6.4 广场数据存储
+- 广场数据存储在 MongoDB 中。
 - 验证方式：登录 MongoDB 查询对应 Collection，确认数据正确落库。
 
 ---
@@ -744,7 +744,7 @@ DB 配置建议 ≥ IM 总核心数 ÷ 2
 | 单聊 / 群聊 | 8C32G | 8C16G MySQL | 16C48G |
 | 聊天室 | 8C16G | 1C2G MySQL | 8C18G |
 | 集群（1~4 节点） | 4×4C8G | 8C16G MySQL | 24C48G |
-| 朋友圈 | 8C32G | 8C16G MySQL + 4C8G MongoDB | 20C56G |
+| 广场 | 8C32G | 8C16G MySQL + 4C8G MongoDB | 20C56G |
 | 推送服务 | 4C8G | — | 4C8G |
 
 ### C. 服务部署关键配置参考
@@ -761,10 +761,10 @@ DB 配置建议 ≥ IM 总核心数 ÷ 2
 | `hazelcast.xml` | `config/` | 集群模式配 TCP-IP，填写全部节点内网 IP |
 | `c3p0.xml` | `config/` | MySQL JDBC 连接、用户名、密码 |
 | `Lite` | `config.toml`（压测工具） | `true`=只发不收，`false`=收发 |
-| `moments.global_visible` | `im-server.conf` | 朋友圈全局可见开关 |
-| `moments.allow_robot_list` | `im-server.conf` | 朋友圈机器人白名单，逗号分隔 |
-| `moments.robot_global_visible` | `im-server.conf` | 机器人朋友圈是否全局可见 |
-| MongoDB 连接 | `im-server.conf` | 朋友圈数据存储，URI 格式 `mongodb://user:pwd@host:port/db` |
+| `moments.global_visible` | `im-server.conf` | 广场全局可见开关 |
+| `moments.allow_robot_list` | `im-server.conf` | 广场机器人白名单，逗号分隔 |
+| `moments.robot_global_visible` | `im-server.conf` | 机器人广场是否全局可见 |
+| MongoDB 连接 | `im-server.conf` | 广场数据存储，URI 格式 `mongodb://user:pwd@host:port/db` |
 | `server.port` | 推送服务配置 | 推送接口端口（默认 8085） |
 | `admin.server.port` | 推送服务配置 | 推送管理后台端口（默认 8086） |
 
@@ -785,19 +785,19 @@ SELECT SUM(cnt) FROM (
 ) AS total;
 ```
 
-**MongoDB（朋友圈数据）：**
+**MongoDB（广场数据）：**
 
 ```javascript
-// 朋友圈 Feed 总数
+// 广场 Feed 总数
 db.moments_feeds.countDocuments()
 
 // 评论总数
 db.moments_comments.countDocuments()
 
-// 按用户查询朋友圈
+// 按用户查询广场
 db.moments_feeds.find({ userId: "target_user_id" })
 
-// 用户朋友圈设置
+// 用户广场设置
 db.moments_user_profiles.find({ userId: "target_user_id" })
 ```
 
@@ -815,5 +815,5 @@ db.moments_user_profiles.find({ userId: "target_user_id" })
 | TC-CR-2000 | 两千人聊天室 |
 | TC-CR-5000 | 五千人聊天室 |
 | TC-CL-001 ~ 004 | 集群测试（1~4 节点） |
-| TC-MT-001 ~ 008 | 朋友圈功能测试 |
+| TC-MT-001 ~ 008 | 广场功能测试 |
 | TC-PS-001 ~ 005 | 推送服务测试 |
