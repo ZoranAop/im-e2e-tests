@@ -1,0 +1,27 @@
+# ============================================================
+# stress-tool 配置模板 - 集群广播测试
+# ============================================================
+# 用法: 下载 stress-tool 工具后，将此配置替换 config.toml
+# 说明: 集群场景以多节点广播/分发为负载特征，基准见 config.sh
+#       BENCH_CR_BROADCAST_RATE（稳定后单核广播与拉取速率）
+# ============================================================
+
+[IMConfig]
+Host = "YOUR_IM_SERVER_IP"
+HttpPort = 80
+AdminPort = 18080
+AdminSecret = 123456
+Lite = true
+MessageContent = "集群广播测试消息"
+
+[TestClusterBroadcastConfig]
+Enable = true
+SendUserPrefix = "CU_"
+SendUserCount = 200
+SendUserStart = 0
+ReceiveUserPrefix = "CRU_"
+ReceiveUserCount = 200
+ReceiveUserStart = 0
+WatchUserList = ["YOUR_OBSERVER_USER_ID"]
+SkipConfirm = true
+Loop = 50

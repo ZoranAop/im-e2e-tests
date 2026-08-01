@@ -28,6 +28,7 @@ test-scripts/
 │   ├── stress_group_chat.toml          # stress-tool 群聊消息测试配置模板
 │   ├── stress_chatroom.toml            # stress-tool 聊天室消息测试配置模板
 │   ├── lib_stress.sh                   # stress-tool 集成库
+│   ├── stress_cluster.toml              # stress-tool 集群测试配置模板
 │   └── k6_single_chat.js               # k6 负载测试
 ├── square/                             # 广场功能测试
 │   ├── test_moments_api.ps1            # 广场动态功能测试（PowerShell）
@@ -40,6 +41,8 @@ test-scripts/
 │   └── test_push_server.sh             # 推送服务测试（Bash）
 ├── spec/                               # 测试规范文档
 │   └── IM服务性能测试规范.md
+├── ci/                                  # CI支撑工具
+│   └── mock_im_server.py                # 假IM服务(CI自测用)
 ├── docker-compose.test.yml
 ├── setup.sh
 ├── .env.example

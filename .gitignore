@@ -17,3 +17,7 @@ nohup.out
 
 # Environment
 .env
+
+# Python
+__pycache__/
+*.pyc

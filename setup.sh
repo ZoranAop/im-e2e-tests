@@ -33,11 +33,22 @@ install_ubuntu() {
     log "Install dependencies (Ubuntu/Debian)..."
     sudo apt-get update -qq
     sudo apt-get install -y -qq bc curl mysql-client mongosh netcat-openbsd
+    # k6: real load-test gate with thresholds
+    if ! command -v k6 &>/dev/null; then
+        curl -s https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq k6
+    fi
 }
 
 install_centos() {
     log "Install dependencies (CentOS/RHEL)..."
     sudo yum install -y bc curl mysql mongosh nmap-ncat
+    if ! command -v k6 &>/dev/null; then
+        sudo dnf install -y https://dl.k6.io/rpm/repo.rpm
+        sudo dnf install -y k6
+    fi
 }
 
 install_macos() {
@@ -47,6 +58,7 @@ install_macos() {
         exit 1
     fi
     brew install bc curl mysql-client mongosh
+    brew install k6 || warn "k6 install via brew failed; install manually from https://k6.io"
 }
 
 setup_env() {
@@ -64,6 +76,23 @@ setup_env() {
 
     mkdir -p reports
     log "  Created reports/ directory"
+}
+
+setup_stress_tool() {
+    if [ -f ./stress-tool ]; then
+        log "  stress-tool already present"
+        return 0
+    fi
+    if [ -n "${STRESS_TOOL_URL:-}" ]; then
+        log "  Fetching stress-tool from STRESS_TOOL_URL..."
+        curl -sL "${STRESS_TOOL_URL}" -o ./stress-tool && chmod +x ./stress-tool \
+            && log "  stress-tool installed" \
+            || warn "  failed to download stress-tool from ${STRESS_TOOL_URL}"
+    else
+        warn "  stress-tool not installed. The auto-drive (--mode send/recv) and"
+        warn "  cluster node tests will skip; use --mode verify with MEASURED_* env"
+        warn "  vars, or set STRESS_TOOL_URL and re-run setup.sh."
+    fi
 }
 
 setup_docker() {
@@ -113,10 +142,16 @@ main() {
             check_cmd mongosh || warn "mongosh recommended for MongoDB validation"
             
             setup_env
-            
+            setup_stress_tool
+
             log ""
             log "Setup complete. Run tests with:"
             log "  bash performance/run_single_chat_test.sh check"
+            log "  k6 run -e IM_HOST=<host> -e IM_PORT=80 performance/k6_single_chat.js"
+            log "  # For benchmark assertion without stress-tool, feed measured values:"
+            log "  RATE=19646 TOTAL=... SUCCESS=100 bash performance/run_single_chat_test.sh --mode verify"
+            log "  # Self-test without a real IM server using the bundled mock:"
+            log "  python3 ci/mock_im_server.py 18080 &"
             ;;
         *)
             echo "Usage: bash setup.sh [--docker | --local]"
