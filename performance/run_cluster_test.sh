@@ -39,7 +39,7 @@ source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
 # 测试参数
 # ============================================================
 MODE="check"
-while [[ $# -gt 0 ]]; do case "$1" in -m|--mode) MODE="$2"; shift 2;; -h|--help) MODE="help"; shift;; *) shift;; esac; done
+while [[ $# -gt 0 ]]; do case "$1" in -m|--mode) MODE="$2"; shift 2;; -h|--help) MODE="help"; shift;; check|1|2|3|4|verify) MODE="$1"; shift;; *) shift;; esac; done
 REPORT_DIR="${REPORT_DIR:-${SCRIPT_DIR}/reports}"
 REPORT_FILE="${REPORT_DIR}/cl_$(date +%Y%m%d_%H%M%S).md"
 

@@ -10,7 +10,9 @@ test-scripts/
 │   ├── utils.ps1                       # 通用工具函数库（PowerShell）
 │   ├── utils.sh                        # 通用工具函数库（Bash）
 │   ├── env.sh                          # 环境变量加载（.env 文件支持）
-│   └── db_utils.sh                     # 数据库工具函数（MySQL/MongoDB）
+│   ├── db_utils.sh                     # 数据库工具函数（MySQL/MongoDB）
+│   ├── test_data_factory.sh            # 测试数据工厂
+│   └── data_quality_check.sh           # 数据质量验证
 ├── performance/                        # 性能测试脚本
 │   ├── config.sh                       # 公共配置（基准数据、公式、报告生成）
 │   ├── run_long_connection_test.sh     # 百万长连接测试 (TC-LC-001)
@@ -24,7 +26,9 @@ test-scripts/
 │   ├── calc_performance.sh             # 性能估算计算器
 │   ├── stress_single_chat.toml         # stress-tool 单聊消息测试配置模板
 │   ├── stress_group_chat.toml          # stress-tool 群聊消息测试配置模板
-│   └── stress_chatroom.toml            # stress-tool 聊天室消息测试配置模板
+│   ├── stress_chatroom.toml            # stress-tool 聊天室消息测试配置模板
+│   ├── lib_stress.sh                   # stress-tool 集成库
+│   └── k6_single_chat.js               # k6 负载测试
 ├── square/                             # 广场功能测试
 │   ├── test_moments_api.ps1            # 广场动态功能测试（PowerShell）
 │   ├── test_moments_api.sh             # 广场动态功能测试（Bash）
@@ -36,8 +40,11 @@ test-scripts/
 │   └── test_push_server.sh             # 推送服务测试（Bash）
 ├── spec/                               # 测试规范文档
 │   └── IM服务性能测试规范.md
-├── .env.example                        # 环境配置文件模板
-└── README.md                           # 本文件
+├── docker-compose.test.yml
+├── setup.sh
+├── .env.example
+├── .github/workflows/test.yml
+└── README.md
 ```
 
 ## 环境变量配置
@@ -171,18 +178,18 @@ $env:PUSH_HOST = "<your-push-server-ip>"
 | 编号 | 场景 | 脚本（Bash） | 脚本（PowerShell） | 参考基线 |
 |------|------|-------------|-------------------|----------|
 | TC-LC-001 | 百万长连接 | `run_long_connection_test.sh` | — | 100万在线30分钟无掉线 |
-| TC-SC-001 | 单聊发送消息 | `run_single_chat_test.sh --send` | `run_single_chat_test.ps1 -Mode send` | 19,646条/秒 (16C48G) |
-| TC-SC-002 | 单聊收发消息 | `run_single_chat_test.sh --recv` | `run_single_chat_test.ps1 -Mode recv` | 13,908条/秒 (16C48G) |
-| TC-GC-100 | 百人群聊 | `run_group_chat_test.sh --100` | `run_group_chat_test.ps1 -GroupSize 100` | 1,340条/秒, 单核分发8,375 |
-| TC-GC-200 | 两百人群聊 | `run_group_chat_test.sh --200` | `run_group_chat_test.ps1 -GroupSize 200` | 685.8条/秒, 单核分发8,573 |
-| TC-GC-1000 | 千人群聊 | `run_group_chat_test.sh --1000` | `run_group_chat_test.ps1 -GroupSize 1000` | 140条/秒, 单核分发8,750 |
-| TC-CR-1000 | 千人聊天室 | `run_chatroom_test.sh --1000` | — | 256条/秒, 广播32,000 |
-| TC-CR-2000 | 两千人聊天室 | `run_chatroom_test.sh --2000` | — | 103条/秒, 广播25,773 |
-| TC-CR-5000 | 五千人聊天室 | `run_chatroom_test.sh --5000` | — | 21.5条/秒, 广播13,440 |
-| TC-CL-001 | 集群 - 单节点 | `run_cluster_test.sh --1` | — | 6,537条/秒 (4C8G) |
-| TC-CL-002 | 集群 - 双节点 | `run_cluster_test.sh --2` | — | 9,459条/秒 (8C16G) |
-| TC-CL-003 | 集群 - 三节点 | `run_cluster_test.sh --3` | — | 13,400条/秒 (12C24G) |
-| TC-CL-004 | 集群 - 四节点 | `run_cluster_test.sh --4` | — | 16,080条/秒 (16C32G) |
+| TC-SC-001 | 单聊发送消息 | `run_single_chat_test.sh --mode send` | `run_single_chat_test.ps1 -Mode send` | 19,646条/秒 (16C48G) |
+| TC-SC-002 | 单聊收发消息 | `run_single_chat_test.sh --mode recv` | `run_single_chat_test.ps1 -Mode recv` | 13,908条/秒 (16C48G) |
+| TC-GC-100 | 百人群聊 | `run_group_chat_test.sh --mode 100` | `run_group_chat_test.ps1 -GroupSize 100` | 1,340条/秒, 单核分发8,375 |
+| TC-GC-200 | 两百人群聊 | `run_group_chat_test.sh --mode 200` | `run_group_chat_test.ps1 -GroupSize 200` | 685.8条/秒, 单核分发8,573 |
+| TC-GC-1000 | 千人群聊 | `run_group_chat_test.sh --mode 1000` | `run_group_chat_test.ps1 -GroupSize 1000` | 140条/秒, 单核分发8,750 |
+| TC-CR-1000 | 千人聊天室 | `run_chatroom_test.sh --mode 1000` | — | 256条/秒, 广播32,000 |
+| TC-CR-2000 | 两千人聊天室 | `run_chatroom_test.sh --mode 2000` | — | 103条/秒, 广播25,773 |
+| TC-CR-5000 | 五千人聊天室 | `run_chatroom_test.sh --mode 5000` | — | 21.5条/秒, 广播13,440 |
+| TC-CL-001 | 集群 - 单节点 | `run_cluster_test.sh --mode 1` | — | 6,537条/秒 (4C8G) |
+| TC-CL-002 | 集群 - 双节点 | `run_cluster_test.sh --mode 2` | — | 9,459条/秒 (8C16G) |
+| TC-CL-003 | 集群 - 三节点 | `run_cluster_test.sh --mode 3` | — | 13,400条/秒 (12C24G) |
+| TC-CL-004 | 集群 - 四节点 | `run_cluster_test.sh --mode 4` | — | 16,080条/秒 (16C32G) |
 | TC-MX-001 | 混合负载 | `run_mixed_workload_test.sh` | — | 加权容量估算 |
 
 ### 功能测试用例

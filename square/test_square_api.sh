@@ -22,6 +22,10 @@ source "${SCRIPT_DIR}/../common/utils.sh"
 source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
 source "${SCRIPT_DIR}/../common/db_utils.sh" 2>/dev/null || true
 
+if [ -f "${SCRIPT_DIR}/../performance/config.sh" ]; then
+    source "${SCRIPT_DIR}/../performance/config.sh"
+fi
+
 # ============================================================
 # 测试参数
 # ============================================================
@@ -306,7 +310,22 @@ main() {
     test_square_config
     test_square_performance
 
-    test_summary
+    print_summary_combined() {
+        local total=$((PASS_COUNT + FAIL_COUNT + SKIP_COUNT + PASSED_TESTS + FAILED_TESTS + SKIPPED_TESTS))
+        local all_pass=$((PASS_COUNT + PASSED_TESTS))
+        local all_fail=$((FAIL_COUNT + FAILED_TESTS))
+        local all_skip=$((SKIP_COUNT + SKIPPED_TESTS))
+        echo ""
+        echo "  Summary: Total=${total}  Pass=${all_pass}  Fail=${all_fail}  Skip=${all_skip}"
+        if [ "${all_fail}" -gt 0 ]; then
+            echo "  Result: FAIL"
+            exit 1
+        else
+            echo "  Result: PASS"
+            exit 0
+        fi
+    }
+    print_summary_combined
 }
 
 main

@@ -9,6 +9,12 @@
 
 set -euo pipefail
 
+if ! declare -f log_fail &>/dev/null; then
+    if [ -f "$(dirname "$0")/config.sh" ]; then
+        source "$(dirname "$0")/config.sh"
+    fi
+fi
+
 STRESS_TOOL="${STRESS_TOOL:-./stress-tool}"
 STRESS_CONFIG_DIR="${STRESS_CONFIG_DIR:-.}"
 STRESS_OUTPUT_DIR="${STRESS_OUTPUT_DIR:-./reports}"
@@ -26,9 +32,10 @@ render_toml() {
     fi
     cp "${template}" "${output}"
     sed -i "s/YOUR_IM_SERVER_IP/${IM_HOST}/g" "${output}"
+    sed -i "s/IM_SERVER_PUBLIC_IP/${IM_HOST}/g" "${output}"
     sed -i "s/YOUR_IM_SERVER_INTERNAL_IP/${IM_INTERNAL_IP:-${IM_HOST}}/g" "${output}"
     sed -i "s/YOUR_OBSERVER_USER_ID/${OBSERVER_USER_ID:-observer}/g" "${output}"
-    sed -i "s|AdminPort = 80|AdminPort = ${IM_HTTP_PORT}|g" "${output}"
+    sed -i "s|HttpPort = 80|HttpPort = ${IM_HTTP_PORT}|g" "${output}"
     sed -i "s|AdminSecret = 123456|AdminSecret = ${IM_ADMIN_SECRET}|g" "${output}"
     log_info "Rendered config: ${output}"
     return 0

@@ -31,7 +31,7 @@ IM_ADMIN_URL="http://${IM_HOST}:${IM_ADMIN_PORT}"
 # 单聊发送测试基准
 BENCH_SC_SEND_RATE=19646          # 发送速率（条/秒）
 BENCH_SC_SEND_CORE_RATE=1227      # 单核发送速率（条/秒/核）
-BENCH_SC_SEND_CORE_DISPATCH=2455  # 单核分发速率（条/秒/核）
+BENCH_SC_SEND_CORE_DISPATCH=2454  # 单核分发速率（条/秒/核）
 BENCH_SC_SEND_TIME=509            # 发送时间（秒）
 
 # 单聊收发测试基准

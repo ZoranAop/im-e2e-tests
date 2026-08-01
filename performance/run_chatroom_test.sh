@@ -27,6 +27,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/config.sh"
 source "${SCRIPT_DIR}/../common/env.sh" 2>/dev/null || true
 source "${SCRIPT_DIR}/lib_stress.sh" 2>/dev/null || true
+source "${SCRIPT_DIR}/../common/db_utils.sh" 2>/dev/null || true
 
 # ============================================================
 # 测试参数
