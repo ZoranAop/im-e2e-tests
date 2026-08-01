@@ -111,16 +111,20 @@ parse_stress_output() {
     P95=$(grep -i "p95\|P95" "${logfile}" | tail -1 | grep -oE '[0-9.]+' | head -1 || true)
     CPU=$(grep -i "cpu" "${logfile}" | tail -1 | grep -oE '[0-9.]+' | head -1 || true)
 
-    # Output as bash variables for eval
-    echo "TOTAL=${TOTAL:-0}"
-    echo "DURATION=${DURATION:-0}"  
-    echo "RATE=${RATE:-0}"
-    echo "SUCCESS=${SUCCESS:-0}"
-    echo "P99=${P99:-0}"
-    echo "P95=${P95:-0}"
-    echo "CPU=${CPU:-0}"
+    # Write variable assignments to temp file for caller to source
+    # (separating data from log output prevents eval from choking on ANSI codes)
+    local varfile="${STRESS_OUTPUT_DIR}/.stress_vars_$$"
+    cat > "${varfile}" << EOF
+TOTAL=${TOTAL:-0}
+DURATION=${DURATION:-0}
+RATE=${RATE:-0}
+SUCCESS=${SUCCESS:-0}
+P99=${P99:-0}
+P95=${P95:-0}
+CPU=${CPU:-0}
+EOF
 
-    # Print summary
+    # Print summary (stdout only, no eval hazard)
     log_info "--- stress-tool Results ---"
     log_metric "Total Messages" "${TOTAL:-N/A}"
     log_metric "Duration" "${DURATION:-N/A}s"
@@ -147,8 +151,13 @@ run_stress_test() {
         return 1
     fi
     
-    # Parse and export results
-    eval "$(parse_stress_output "${logfile}")"
+    # Parse and export results (source varfile, avoid eval on mixed log+data output)
+    parse_stress_output "${logfile}" || true
+    local varfile="${STRESS_OUTPUT_DIR}/.stress_vars_$$"
+    if [ -f "${varfile}" ]; then
+        source "${varfile}"
+        rm -f "${varfile}"
+    fi
     
     # Cleanup
     rm -f "${config}"

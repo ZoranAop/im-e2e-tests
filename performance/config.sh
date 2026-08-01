@@ -231,6 +231,39 @@ calc_dispatch_rate() {
 }
 
 # ============================================================
+# Float comparison (auto-selects bc or awk)
+# ============================================================
+
+float_cmp() {
+    # Usage: float_cmp "a" "op" "b" — op can be >= <= > < ==
+    # Returns 0 (true) or 1 (false)
+    local a="$1" op="$2" b="$3"
+    if ${HAVE_BC:-false}; then
+        [ "$(echo "${a} ${op} ${b}" | bc -l 2>/dev/null)" = "1" ] && return 0 || return 1
+    else
+        awk "BEGIN { if (${a} ${op} ${b}) exit 0; else exit 1 }" 2>/dev/null && return 0 || return 1
+    fi
+}
+
+float_div() {
+    local a="$1" b="$2" scale="${3:-2}"
+    if ${HAVE_BC:-false}; then
+        echo "scale=${scale}; ${a} / ${b}" | bc -l 2>/dev/null || echo "0"
+    else
+        awk "BEGIN { printf \"%.${scale}f\", ${a} / ${b} }" 2>/dev/null || echo "0"
+    fi
+}
+
+float_mul() {
+    local a="$1" b="$2" scale="${3:-2}"
+    if ${HAVE_BC:-false}; then
+        echo "scale=${scale}; ${a} * ${b}" | bc -l 2>/dev/null || echo "0"
+    else
+        awk "BEGIN { printf \"%.${scale}f\", ${a} * ${b} }" 2>/dev/null || echo "0"
+    fi
+}
+
+# ============================================================
 # Assertion Primitives
 # ============================================================
 
@@ -247,7 +280,7 @@ assert_eq() {
 
 assert_ge() {
     local actual="$1" threshold="$2" name="$3"
-    if [ "$(echo "${actual} >= ${threshold}" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+    if float_cmp "${actual}" ">=" "${threshold}"; then
         log_pass "${name}: ${actual} >= ${threshold}"
         return 0
     else
@@ -258,7 +291,7 @@ assert_ge() {
 
 assert_le() {
     local actual="$1" threshold="$2" name="$3"
-    if [ "$(echo "${actual} <= ${threshold}" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+    if float_cmp "${actual}" "<=" "${threshold}"; then
         log_pass "${name}: ${actual} <= ${threshold}"
         return 0
     else
@@ -269,10 +302,10 @@ assert_le() {
 
 assert_success_rate() {
     local actual_pct="$1" name="${2:-消息成功率}"
-    if [ "$(echo "${actual_pct} >= 100" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+    if float_cmp "${actual_pct}" ">=" "100"; then
         log_pass "${name}: ${actual_pct}% = 100%"
         return 0
-    elif [ "$(echo "${actual_pct} >= 99.9" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+    elif float_cmp "${actual_pct}" ">=" "99.9"; then
         log_warn "${name}: ${actual_pct}% (允许 0.1% 容差)"
         return 0
     else
@@ -283,12 +316,12 @@ assert_success_rate() {
 
 assert_latency() {
     local p99="$1" p95="$2" threshold_p99="$3" threshold_p95="$4"
-    if [ "$(echo "${p99} <= ${threshold_p99}" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+    if float_cmp "${p99}" "<=" "${threshold_p99}"; then
         log_pass "P99延迟: ${p99}ms <= ${threshold_p99}ms"
     else
         log_fail "P99延迟: ${p99}ms > ${threshold_p99}ms"
     fi
-    if [ "$(echo "${p95} <= ${threshold_p95}" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+    if float_cmp "${p95}" "<=" "${threshold_p95}"; then
         log_pass "P95延迟: ${p95}ms <= ${threshold_p95}ms"
     else
         log_fail "P95延迟: ${p95}ms > ${threshold_p95}ms"
@@ -297,7 +330,7 @@ assert_latency() {
 
 assert_cpu_under() {
     local cpu_pct="$1" threshold="${2:-80}" name="${3:-CPU利用率}"
-    if [ "$(echo "${cpu_pct} <= ${threshold}" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+    if float_cmp "${cpu_pct}" "<=" "${threshold}"; then
         log_pass "${name}: ${cpu_pct}% <= ${threshold}%"
         return 0
     else
@@ -312,7 +345,7 @@ percentage_of_benchmark() {
     if [ "${benchmark}" = "0" ] || [ -z "${benchmark}" ]; then
         echo "0"
     else
-        echo "scale=1; ${actual} * 100 / ${benchmark}" | bc 2>/dev/null || echo "0"
+        float_div "$(float_mul "${actual}" "100" "2")" "${benchmark}" "1"
     fi
 }
 
@@ -323,9 +356,17 @@ percentage_of_benchmark() {
 check_prerequisites() {
     print_section "环境检查"
 
-    # 检查 bc（用于浮点计算）
-    if ! command -v bc &>/dev/null; then
-        log_fail "缺少 bc 命令，浮点计算不可用。请安装: apt-get install bc / yum install bc"
+    # Check float computation capability (bc preferred, awk fallback)
+    HAVE_BC=false
+    HAVE_AWK=false
+    if command -v bc &>/dev/null; then
+        HAVE_BC=true
+        log_pass "bc 可用（浮点计算）"
+    elif command -v awk &>/dev/null; then
+        HAVE_AWK=true
+        log_warn "bc 不可用，降级使用 awk（精度可能略低）"
+    else
+        log_fail "缺少 bc 和 awk，浮点计算不可用。请安装: apt-get install bc / yum install bc"
         return 1
     fi
 
@@ -396,8 +437,8 @@ check_benchmark() {
     local result
 
     result=$(percentage_of_benchmark "${actual}" "${benchmark}")
-    if [ "$(echo "${result} >= 80" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
-        if [ "$(echo "${result} >= 100" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+    if float_cmp "${result}" ">=" "80"; then
+        if float_cmp "${result}" ">=" "100"; then
             log_pass "${metric_name}: ${actual}（优秀，达到基准的 ${result}%）"
         else
             log_pass "${metric_name}: ${actual}（合格，达到基准的 ${result}%）"
