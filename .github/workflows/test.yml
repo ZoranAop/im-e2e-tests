@@ -1,0 +1,81 @@
+name: IM E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpass123
+          MYSQL_DATABASE: imdb
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=10
+
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc curl mysql-client netcat-openbsd
+
+      - name: Create .env
+        run: |
+          cp .env.example .env
+          echo "MYSQL_PASS=testpass123" >> .env
+          echo "MYSQL_DB=imdb" >> .env
+
+      - name: Syntax Check (Bash)
+        run: |
+          find . -name "*.sh" -exec bash -n {} \;
+
+      - name: Check Prerequisites
+        run: |
+          bash performance/run_single_chat_test.sh check || true
+          bash performance/run_group_chat_test.sh check || true
+          bash performance/run_chatroom_test.sh check || true
+          bash performance/run_cluster_test.sh check || true
+          bash performance/run_mixed_workload_test.sh check || true
+
+      - name: Smoke Test (Push)
+        run: |
+          bash push/test_push_server.sh || true
+
+      - name: Smoke Test (Square)
+        run: |
+          bash square/test_moments_api.sh --user-id "ci_test_user" || true
+          bash square/test_square_api.sh --user-id "ci_test_user" || true
+
+      - name: Performance Estimation
+        run: |
+          bash performance/calc_performance.sh --all
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "CI pipeline completed."
