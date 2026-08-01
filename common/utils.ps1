@@ -15,6 +15,26 @@ $env:PUSH_HOST ??= "localhost"
 $env:PUSH_PORT ??= "8085"
 $env:PUSH_ADMIN_PORT ??= "8086"
 
+function Check-Tcp {
+    param([string]$Host, [int]$Port, [int]$TimeoutMs = 3000)
+    try {
+        $tcp = New-Object System.Net.Sockets.TcpClient
+        $conn = $tcp.BeginConnect($Host, $Port, $null, $null)
+        if ($conn.AsyncWaitHandle.WaitOne($TimeoutMs)) {
+            $tcp.EndConnect($conn); $tcp.Close(); return $true
+        }
+        $tcp.Close(); return $false
+    } catch { return $false }
+}
+
+function Invoke-WithRetry {
+    param([ScriptBlock]$ScriptBlock, [int]$MaxRetries = 3, [int]$DelaySec = 1)
+    $attempt = 0
+    while ($attempt -lt $MaxRetries) {
+        try { return & $ScriptBlock } catch { $attempt++; if ($attempt -ge $MaxRetries) { throw }; Start-Sleep -Seconds $DelaySec }
+    }
+}
+
 function Get-ImBaseUrl { "http://$($env:IM_HOST):$($env:IM_HTTP_PORT)" }
 function Get-ImAdminUrl { "http://$($env:IM_HOST):$($env:IM_ADMIN_PORT)" }
 function Get-PushUrl { "http://$($env:PUSH_HOST):$($env:PUSH_PORT)" }

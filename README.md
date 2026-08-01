@@ -1,39 +1,48 @@
 # IM 服务测试脚本集
 
-本目录包含 IM 服务的完整测试脚本集合，涵盖性能测试、功能测试和连通性验证。
+本目录包含 IM 服务的端到端测试脚本集合，涵盖性能测试、功能测试和连通性验证。支持 Linux (Bash) 和 Windows (PowerShell) 双平台。
 
 ## 目录结构
 
 ```
 test-scripts/
 ├── common/
-│   ├── utils.ps1                      # 通用测试工具函数库（PowerShell）
-│   └── utils.sh                       # 通用测试工具函数库（Bash）
-├── performance/                       # 性能测试脚本
-│   ├── config.sh                      # 公共配置与工具函数（基准数据、公式）
-│   ├── run_long_connection_test.sh    # 百万长连接测试 (TC-LC-001)
-│   ├── run_single_chat_test.sh        # 单聊消息测试 (TC-SC-001/002)
-│   ├── run_group_chat_test.sh         # 群聊消息测试 (TC-GC-100/200/1000)
-│   ├── run_chatroom_test.sh           # 聊天室消息测试 (TC-CR-1000/2000/5000)
-│   ├── calc_performance.sh            # 性能估算计算器
-│   ├── stress-tool_single_chat.toml     # stress-tool 单聊消息测试配置模板
-│   ├── stress-tool_group_chat.toml      # stress-tool 群聊消息测试配置模板
-│   └── stress-tool_chatroom.toml        # stress-tool 聊天室消息测试配置模板
-├── square/                            # 广场功能测试
-│   ├── test_square_api.ps1            # 广场话题功能测试（PowerShell）
-│   ├── test_square_api.sh             # 广场话题功能测试（Bash）
-│   ├── test_moments_api.ps1           # 广场动态功能测试（PowerShell）
-│   ├── test_moments_api.sh            # 广场动态功能测试（Bash）
-│   └── config.toml                    # stress-tool 广场压测配置
-├── push/                              # 推送服务测试
-│   ├── test_push_server.ps1           # 推送服务测试（PowerShell）
-│   └── test_push_server.sh            # 推送服务测试（Bash）
-└── README.md                          # 本文件
+│   ├── utils.ps1                       # 通用工具函数库（PowerShell）
+│   ├── utils.sh                        # 通用工具函数库（Bash）
+│   ├── env.sh                          # 环境变量加载（.env 文件支持）
+│   └── db_utils.sh                     # 数据库工具函数（MySQL/MongoDB）
+├── performance/                        # 性能测试脚本
+│   ├── config.sh                       # 公共配置（基准数据、公式、报告生成）
+│   ├── run_long_connection_test.sh     # 百万长连接测试 (TC-LC-001)
+│   ├── run_single_chat_test.sh         # 单聊消息测试 (TC-SC-001/002) [Bash]
+│   ├── run_single_chat_test.ps1        # 单聊消息测试 (TC-SC-001/002) [PowerShell]
+│   ├── run_group_chat_test.sh          # 群聊消息测试 (TC-GC-100/200/1000) [Bash]
+│   ├── run_group_chat_test.ps1         # 群聊消息测试 (TC-GC-100/200/1000) [PowerShell]
+│   ├── run_chatroom_test.sh            # 聊天室消息测试 (TC-CR-1000/2000/5000)
+│   ├── run_cluster_test.sh             # 集群性能测试 (TC-CL-001~004)
+│   ├── run_mixed_workload_test.sh      # 混合负载测试 (TC-MX-001)
+│   ├── calc_performance.sh             # 性能估算计算器
+│   ├── stress_single_chat.toml         # stress-tool 单聊消息测试配置模板
+│   ├── stress_group_chat.toml          # stress-tool 群聊消息测试配置模板
+│   └── stress_chatroom.toml            # stress-tool 聊天室消息测试配置模板
+├── square/                             # 广场功能测试
+│   ├── test_moments_api.ps1            # 广场动态功能测试（PowerShell）
+│   ├── test_moments_api.sh             # 广场动态功能测试（Bash）
+│   ├── test_square_api.ps1             # 广场话题功能测试（PowerShell）
+│   ├── test_square_api.sh              # 广场话题功能测试（Bash）
+│   └── config.toml                     # stress-tool 广场压测配置
+├── push/                               # 推送服务测试
+│   ├── test_push_server.ps1            # 推送服务测试（PowerShell）
+│   └── test_push_server.sh             # 推送服务测试（Bash）
+├── spec/                               # 测试规范文档
+│   └── IM服务性能测试规范.md
+├── .env.example                        # 环境配置文件模板
+└── README.md                           # 本文件
 ```
 
 ## 环境变量配置
 
-在运行脚本前，可通过环境变量配置目标服务地址：
+可通过环境变量或 `.env` 文件配置目标服务地址（优先级：环境变量 > .env 文件 > 默认值）：
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
@@ -46,47 +55,70 @@ test-scripts/
 | `PUSH_ADMIN_PORT` | `8086` | 推送管理后台端口 |
 | `MYSQL_HOST` | `localhost` | MySQL 地址 |
 | `MYSQL_USER` | `root` | MySQL 用户名 |
-| `MYSQL_PASS` | `` | MySQL 密码 |
-| `MONGO_HOST` | `localhost` | MongoDB 地址（广场） |
+| `MYSQL_PASS` | — | MySQL 密码 |
+| `MYSQL_DB` | `imdb` | MySQL 数据库名 |
+| `MONGO_HOST` | `localhost` | MongoDB 地址 |
 | `MONGO_PORT` | `27017` | MongoDB 端口 |
+| `CLUSTER_NODE_IPS` | — | 集群节点 IP（空格分隔） |
+| `CLUSTER_AUTH_IP` | — | 集群授权节点 IP |
 
 ## 快速开始
+
+### 环境配置
+
+```bash
+# 方法一: 环境变量
+export IM_HOST="192.168.1.100"
+
+# 方法二: .env 文件
+cp .env.example .env
+# 编辑 .env 填入实际地址
+```
 
 ### Linux (Bash)
 
 ```bash
-# 配置目标服务器
-export IM_HOST="192.168.1.100"
-
 # ===== 性能测试 =====
 
-# 长连接测试（环境检查）
+# 长连接测试
 bash performance/run_long_connection_test.sh --mode check
 
-# 单聊消息测试（环境检查 / 发送 / 收发 / 完整）
+# 单聊消息测试
 bash performance/run_single_chat_test.sh --mode check
 bash performance/run_single_chat_test.sh --mode send
 bash performance/run_single_chat_test.sh --mode recv
+bash performance/run_single_chat_test.sh --mode full
 
-# 群聊消息测试（百人群 / 两百人群 / 千人群）
+# 群聊消息测试
 bash performance/run_group_chat_test.sh --mode check
 bash performance/run_group_chat_test.sh --mode 100
 bash performance/run_group_chat_test.sh --mode 200
 bash performance/run_group_chat_test.sh --mode 1000
 
-# 聊天室消息测试（千人 / 两千人 / 五千人）
+# 聊天室消息测试
 bash performance/run_chatroom_test.sh --mode check
 bash performance/run_chatroom_test.sh --mode 1000
 bash performance/run_chatroom_test.sh --mode 2000
 bash performance/run_chatroom_test.sh --mode 5000
 
+# 集群性能测试
+bash performance/run_cluster_test.sh --mode check
+bash performance/run_cluster_test.sh --mode 1
+bash performance/run_cluster_test.sh --mode 2
+bash performance/run_cluster_test.sh --mode 3
+bash performance/run_cluster_test.sh --mode 4
+
+# 混合负载测试
+bash performance/run_mixed_workload_test.sh --mode check
+bash performance/run_mixed_workload_test.sh --mode full
+
 # 性能估算计算器
-bash performance/calc_performance.sh --all          # 显示所有估算模型
-bash performance/calc_performance.sh --single-chat  # 单聊容量估算
-bash performance/calc_performance.sh --group-chat   # 群聊容量估算
-bash performance/calc_performance.sh --chatroom     # 聊天室容量估算
-bash performance/calc_performance.sh --cluster      # 集群容量估算
-bash performance/calc_performance.sh --custom       # 自定义估算
+bash performance/calc_performance.sh --all
+bash performance/calc_performance.sh --single-chat
+bash performance/calc_performance.sh --group-chat
+bash performance/calc_performance.sh --chatroom
+bash performance/calc_performance.sh --cluster
+bash performance/calc_performance.sh --custom
 
 # ===== 功能测试 =====
 
@@ -107,6 +139,21 @@ bash push/test_push_server.sh
 $env:IM_HOST = "192.168.1.100"
 $env:PUSH_HOST = "192.168.1.101"
 
+# ===== 性能测试 =====
+
+# 单聊消息测试
+.\performance\run_single_chat_test.ps1 -Mode check
+.\performance\run_single_chat_test.ps1 -Mode send
+.\performance\run_single_chat_test.ps1 -Mode recv
+
+# 群聊消息测试
+.\performance\run_group_chat_test.ps1 -GroupSize check
+.\performance\run_group_chat_test.ps1 -GroupSize 100
+.\performance\run_group_chat_test.ps1 -GroupSize 200
+.\performance\run_group_chat_test.ps1 -GroupSize 1000
+
+# ===== 功能测试 =====
+
 # 广场动态功能测试
 .\square\test_moments_api.ps1 -TestUserId "your_user_id"
 
@@ -117,41 +164,26 @@ $env:PUSH_HOST = "192.168.1.101"
 .\push\test_push_server.ps1
 ```
 
-## stress-tool 压测配置模板
-
-`performance/` 目录下提供了 stress-tool 工具的配置文件模板：
-
-| 模板文件 | 对应测试 |
-|----------|----------|
-| `stress-tool_single_chat.toml` | 单聊消息发送/收发测试 |
-| `stress-tool_group_chat.toml` | 群聊消息测试（百人/两百人/千人） |
-| `stress-tool_chatroom.toml` | 聊天室消息测试（发送/接收） |
-
-使用方式：
-
-```bash
-# 将对应模板替换为 config.toml
-# 修改模板中的 YOUR_IM_SERVER_IP 和 YOUR_OBSERVER_USER_ID
-# 执行压测
-nohup ./stress-tool 2>&1 & tail -f nohup.out
-```
-
 ## 测试覆盖范围
 
 ### 性能测试用例
 
-| 编号 | 场景 | 脚本 | 参考基线 |
-|------|------|------|----------|
-| TC-LC-001 | 百万长连接 | `run_long_connection_test.sh` | 100万在线30分钟无掉线 |
-| TC-SC-001 | 单聊发送消息 | `run_single_chat_test.sh --send` | 19,646条/秒 (16C48G) |
-| TC-SC-002 | 单聊收发消息 | `run_single_chat_test.sh --recv` | 13,908条/秒 (16C48G) |
-| TC-GC-100 | 百人群聊 | `run_group_chat_test.sh --100` | 1,340条/秒, 单核分发8,375 |
-| TC-GC-200 | 两百人群聊 | `run_group_chat_test.sh --200` | 685.8条/秒, 单核分发8,573 |
-| TC-GC-1000 | 千人群聊 | `run_group_chat_test.sh --1000` | 140条/秒, 单核分发8,750 |
-| TC-CR-1000 | 千人聊天室 | `run_chatroom_test.sh --1000` | 256条/秒, 广播32,000 |
-| TC-CR-2000 | 两千人聊天室 | `run_chatroom_test.sh --2000` | 103条/秒, 广播25,773 |
-| TC-CR-5000 | 五千人聊天室 | `run_chatroom_test.sh --5000` | 21.5条/秒, 广播13,440 |
-| TC-CL-001~004 | 集群测试 | `calc_performance.sh --cluster` | 参考 stress-tool 模板 |
+| 编号 | 场景 | 脚本（Bash） | 脚本（PowerShell） | 参考基线 |
+|------|------|-------------|-------------------|----------|
+| TC-LC-001 | 百万长连接 | `run_long_connection_test.sh` | — | 100万在线30分钟无掉线 |
+| TC-SC-001 | 单聊发送消息 | `run_single_chat_test.sh --send` | `run_single_chat_test.ps1 -Mode send` | 19,646条/秒 (16C48G) |
+| TC-SC-002 | 单聊收发消息 | `run_single_chat_test.sh --recv` | `run_single_chat_test.ps1 -Mode recv` | 13,908条/秒 (16C48G) |
+| TC-GC-100 | 百人群聊 | `run_group_chat_test.sh --100` | `run_group_chat_test.ps1 -GroupSize 100` | 1,340条/秒, 单核分发8,375 |
+| TC-GC-200 | 两百人群聊 | `run_group_chat_test.sh --200` | `run_group_chat_test.ps1 -GroupSize 200` | 685.8条/秒, 单核分发8,573 |
+| TC-GC-1000 | 千人群聊 | `run_group_chat_test.sh --1000` | `run_group_chat_test.ps1 -GroupSize 1000` | 140条/秒, 单核分发8,750 |
+| TC-CR-1000 | 千人聊天室 | `run_chatroom_test.sh --1000` | — | 256条/秒, 广播32,000 |
+| TC-CR-2000 | 两千人聊天室 | `run_chatroom_test.sh --2000` | — | 103条/秒, 广播25,773 |
+| TC-CR-5000 | 五千人聊天室 | `run_chatroom_test.sh --5000` | — | 21.5条/秒, 广播13,440 |
+| TC-CL-001 | 集群 - 单节点 | `run_cluster_test.sh --1` | — | 6,537条/秒 (4C8G) |
+| TC-CL-002 | 集群 - 双节点 | `run_cluster_test.sh --2` | — | 9,459条/秒 (8C16G) |
+| TC-CL-003 | 集群 - 三节点 | `run_cluster_test.sh --3` | — | 13,400条/秒 (12C24G) |
+| TC-CL-004 | 集群 - 四节点 | `run_cluster_test.sh --4` | — | 16,080条/秒 (16C32G) |
+| TC-MX-001 | 混合负载 | `run_mixed_workload_test.sh` | — | 加权容量估算 |
 
 ### 功能测试用例
 
@@ -191,6 +223,16 @@ nohup ./stress-tool 2>&1 & tail -f nohup.out
 | 通知+拉取阶段 | 2,978 条/秒/核 | 收发-发送推导 |
 | 聊天室广播 | 13,000 条/秒/核 | 聊天室稳定值 |
 
+### 集群扩展模型
+
+| 节点数 | 总核心数 | 总体吞吐量 | 扩展系数 |
+|--------|----------|------------|----------|
+| 1 | 4C | 6,537 条/秒 | 1.0× (基准) |
+| 2 | 8C | 9,459 条/秒 | 1.5× |
+| 3 | 12C | 13,400 条/秒 | 2.0× |
+| 4 | 16C | 16,080 条/秒 | 2.5× |
+| N | N×4C | ≈ 6,537×(1+(N-1)×0.5) | — |
+
 ### 容量估算公式
 
 ```
@@ -199,6 +241,7 @@ nohup ./stress-tool 2>&1 & tail -f nohup.out
 聊天室: 所需核心数 = 预估消息量(条/秒) ÷ (13,000÷人数) × 安全系数
 长连接: 所需核心数 = 预估连接数 ÷ 62,500 × 安全系数
 集群: N节点吞吐 = 单节点吞吐 × (1 + (N-1) × 0.5)
+混合: 加权单核速率 = 1 ÷ Σ(占比÷各类型单核速率)
 ```
 
 ## 前置条件
@@ -206,12 +249,22 @@ nohup ./stress-tool 2>&1 & tail -f nohup.out
 1. IM 服务已部署并可访问（HTTP 80 / Admin 18080）
 2. MySQL 已配置并可达
 3. 广场测试需要：
-   - 专业版 IM 服务
    - MongoDB 已配置
    - `moments.global_visible` 等配置项已设置
 4. 推送服务已部署（8085 / 8086）
-5. 测试用户已在 IM 服务中注册
-6. 压测需要 `stress-tool` 工具
+5. 集群测试需要 1~4 个 IM 节点 + `cluster-config.xml` TCP-IP 配置
+6. 测试用户已在 IM 服务中注册
+7. 压测需要 `stress-tool` 压测工具
+
+## 通用工具函数
+
+`common/` 目录提供可复用的测试基础设施：
+
+| 文件 | 功能 |
+|------|------|
+| `utils.sh` / `utils.ps1` | 日志输出、断言、HTTP 请求、TCP 检查、重试机制、JSON 结果输出 |
+| `env.sh` | `.env` 文件加载（自动读取键值对并导出为环境变量） |
+| `db_utils.sh` | MySQL 连接检查/查询、MongoDB 连接检查/查询、消息分表统计 |
 
 ## 输出说明
 
@@ -230,5 +283,3 @@ nohup ./stress-tool 2>&1 & tail -f nohup.out
 | 优秀 | 所有必采指标满足判定标准，且达到或超过参考基准 |
 | 合格 | 所有必采指标满足判定标准，且不低于参考基准的 80% |
 | 不合格 | 任一必采指标未满足判定标准 |
-
-

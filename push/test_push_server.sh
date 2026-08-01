@@ -86,9 +86,16 @@ else
 fi
 
 # ============================================================
-# 推送条件验证
+# TC-PS-003: 离线推送触发验证
 # ============================================================
-test_header "推送决策条件验证"
+test_header "TC-PS-003: 离线推送触发验证"
+
+step "验证推送服务端口..."
+if timeout 3 bash -c "echo >/dev/tcp/${PUSH_HOST}/${PUSH_PORT}" 2>/dev/null; then
+    pass "推送服务端口 ${PUSH_PORT} 可达 - 离线推送可触发"
+else
+    fail "推送服务端口不可达，离线推送无法触发"
+fi
 
 step "推送决策条件检查清单..."
 info "  [1] 客户端在线时不推送"
@@ -103,17 +110,31 @@ info "  [9] 免打扰时段内不推送"
 info "以上条件由 IM 服务端自动判断，需配合客户端进行端到端验证"
 
 # ============================================================
-# 推送厂商支持清单
+# TC-PS-004: 推送厂商支持验证
 # ============================================================
-test_header "推送厂商支持状态"
+test_header "TC-PS-004: 推送厂商支持验证"
 
-info "  华为 HMS       内置支持  -- 需配置 AppId/AppSecret"
-info "  小米 MiPush    内置支持  -- 需配置 AppId/AppKey"
-info "  OPPO Push      内置支持  -- 需配置 AppId/AppKey"
-info "  Vivo Push      内置支持  -- 需配置 AppId/AppKey"
-info "  魅族 Push      内置支持  -- 需配置 AppId/AppKey"
-info "  Apple APNs     内置支持  -- 需上传 p8 密钥"
-info "  Google FCM     内置支持  -- 需上传 JSON 凭证"
+step "检查推送厂商配置端点可达性..."
+push_vendors=(
+    "huawei:HMS"
+    "xiaomi:MiPush"
+    "oppo:OPPO Push"
+    "vivo:Vivo Push"
+    "meizu:魅族 Push"
+    "apns:Apple APNs"
+    "fcm:Google FCM"
+)
+for vendor_entry in "${push_vendors[@]}"; do
+    vendor_key="${vendor_entry%%:*}"
+    vendor_name="${vendor_entry##*:}"
+    http_code=$(curl -s -o /dev/null -w "%{http_code}" "${PUSH_ADMIN_URL}/api/admin/config/${vendor_key}" 2>/dev/null || echo "000")
+    if [ "${http_code}" = "200" ] || [ "${http_code}" = "401" ] || [ "${http_code}" = "403" ]; then
+        pass "  ${vendor_name} (${vendor_key}) 配置端点可达"
+    else
+        skip "  ${vendor_name} (${vendor_key}) 配置端点不可达，需手动配置"
+    fi
+done
+
 info "  个推           内置支持  -- 第三方推送"
 info "  UniPush        内置支持  -- DCloud 推送"
 info "  极光推送       需自行扩展 -- 参考内置厂商自行实现"

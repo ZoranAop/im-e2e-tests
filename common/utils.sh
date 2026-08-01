@@ -150,6 +150,50 @@ assert_http_ok() {
 }
 
 # ============================================================
+# TCP Connectivity
+# ============================================================
+check_tcp() {
+    local host="$1"
+    local port="$2"
+    local timeout_sec="${3:-3}"
+    if command -v timeout &>/dev/null; then
+        timeout "${timeout_sec}" bash -c "echo >/dev/tcp/${host}/${port}" 2>/dev/null && return 0 || return 1
+    else
+        (echo >/dev/tcp/"${host}"/"${port}") 2>/dev/null && return 0 || return 1
+    fi
+}
+
+# ============================================================
+# HTTP with retry and timeout
+# ============================================================
+http_get_retry() {
+    local url="$1"
+    local max_retries="${2:-3}"
+    local timeout_sec="${3:-10}"
+    local attempt=1
+    while [ ${attempt} -le ${max_retries} ]; do
+        local resp=$(curl -s --max-time "${timeout_sec}" "${url}" 2>/dev/null)
+        if [ -n "${resp}" ]; then
+            echo "${resp}"
+            return 0
+        fi
+        sleep 1
+        attempt=$((attempt + 1))
+    done
+    return 1
+}
+
+# ============================================================
+# JSON output for CI/CD
+# ============================================================
+json_test_result() {
+    local name="$1"
+    local status="$2"  # pass/fail/skip
+    local detail="$3"
+    echo "{\"test\":\"${name}\",\"status\":\"${status}\",\"detail\":\"${detail}\"}"
+}
+
+# ============================================================
 # 结果汇总
 # ============================================================
 test_summary() {

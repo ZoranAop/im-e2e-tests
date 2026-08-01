@@ -17,6 +17,11 @@ MYSQL_USER="${MYSQL_USER:-root}"
 MYSQL_PASS="${MYSQL_PASS:-}"
 MYSQL_DB="${MYSQL_DB:-imdb}"
 
+# Cluster test params
+CLUSTER_NODES="${CLUSTER_NODES:-4}"
+CLUSTER_NODE_IPS="${CLUSTER_NODE_IPS:-}"      # space-separated IPs
+CLUSTER_AUTH_IP="${CLUSTER_AUTH_IP:-}"        # license auth node IP
+
 IM_BASE_URL="http://${IM_HOST}:${IM_HTTP_PORT}"
 IM_ADMIN_URL="http://${IM_HOST}:${IM_ADMIN_PORT}"
 
@@ -250,6 +255,36 @@ check_prerequisites() {
 }
 
 # ============================================================
+# 集群节点检查
+# ============================================================
+
+check_cluster_nodes() {
+    print_section "检查集群节点"
+    if [ -z "${CLUSTER_NODE_IPS}" ]; then
+        log_warn "CLUSTER_NODE_IPS 未设置，跳过节点检查"
+        return 0
+    fi
+    local expected_node_ids=""
+    for ip in ${CLUSTER_NODE_IPS}; do
+        local version=$(curl -s "http://${ip}:${IM_ADMIN_PORT}/api/version" 2>/dev/null)
+        if [ -n "${version}" ]; then
+            log_pass "节点 ${ip} 可达"
+        else
+            log_fail "节点 ${ip} 不可达"
+        fi
+    done
+    if [ -n "${CLUSTER_AUTH_IP}" ]; then
+        local cluster_info=$(curl -s "http://${CLUSTER_AUTH_IP}:${IM_ADMIN_PORT}/api/version" 2>/dev/null)
+        local node_ids=$(echo "${cluster_info}" | grep -o '"nodeIds":"[^"]*"' | cut -d'"' -f4)
+        if [ -n "${node_ids}" ]; then
+            log_pass "集群节点 ID: ${node_ids}"
+        else
+            log_warn "无法获取集群节点 ID"
+        fi
+    fi
+}
+
+# ============================================================
 # 结果判定
 # ============================================================
 
@@ -301,6 +336,37 @@ append_to_report() {
     local report_file="$1"
     shift
     echo "$@" >> "${report_file}"
+}
+
+generate_report() {
+    local report_file="$1"
+    local title="$2"
+    local server_spec="$3"
+    local test_params="$4"
+    local results="$5"
+
+    mkdir -p "$(dirname "${report_file}")"
+    cat > "${report_file}" << EOF
+# ${title}
+
+## 测试环境
+| 项目 | 配置 |
+|------|------|
+| 测试日期 | $(date '+%Y-%m-%d %H:%M:%S') |
+| 服务器 | ${server_spec} |
+| IM 地址 | ${IM_HOST}:${IM_HTTP_PORT} |
+
+## 测试参数
+${test_params}
+
+## 测试结果
+${results}
+
+## 结果判定
+总体: $([ ${FAILED_TESTS} -eq 0 ] && echo "通过" || echo "失败")
+通过: ${PASSED_TESTS} | 失败: ${FAILED_TESTS} | 跳过: ${SKIPPED_TESTS}
+EOF
+    log_info "报告已保存: ${report_file}"
 }
 
 print_summary() {
