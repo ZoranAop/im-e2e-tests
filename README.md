@@ -38,7 +38,31 @@ test-scripts/
 │   └── config.toml                     # stress-tool 广场压测配置
 ├── push/                               # 推送服务测试
 │   ├── test_push_server.ps1            # 推送服务测试（PowerShell）
-│   └── test_push_server.sh             # 推送服务测试（Bash）
+│   ├── test_push_server.sh             # 推送服务测试（Bash）
+│   └── test_push_e2e.sh                # 推送端到端测试
+├── auth/                               # 认证测试
+│   └── test_auth_api.sh                # 注册/登录/Token/用户信息
+├── friend/                             # 好友管理测试
+│   └── test_friend_api.sh              # 添加/同意/列表/搜索/删除
+├── group/                              # 群组CRUD测试
+│   └── test_group_api.sh               # 创建/成员/转让/解散
+├── message/                            # 消息功能测试
+│   ├── test_recall_delete.sh           # 撤回/删除
+│   ├── test_read_receipt.sh            # 已读回执
+│   ├── test_rich_message.sh            # 图片/语音/视频/文件/位置/自定义
+│   └── test_typing.sh                  # 输入状态
+├── sync/                               # 同步测试
+│   └── test_offline_sync.sh            # 离线消息拉取/清除
+├── device/                             # 多设备测试
+│   └── test_multi_device.sh            # 在线设备/同步/踢下线
+├── file/                               # 文件测试
+│   └── test_file_upload.sh             # 上传Token/下载URL/校验
+├── search/                             # 搜索测试
+│   └── test_message_search.sh          # 消息/用户/群组搜索
+├── block/                              # 黑名单测试
+│   └── test_block_api.sh               # 拉黑/列表/解除
+├── security/                           # 安全测试
+│   └── test_rate_limit.sh              # 限流/敏感词/IP黑名单
 ├── spec/                               # 测试规范文档
 │   └── IM服务性能测试规范.md
 ├── ci/                                  # CI支撑工具
@@ -250,6 +274,20 @@ k6 run -e IM_HOST=<host> -e IM_PORT=80 performance/k6_single_chat.js
 | TC-PS-003 | 离线推送触发 | `test_push_server.sh` | 推送触发验证 |
 | TC-PS-004 | 推送静音/免打扰 | `test_push_server.sh` | 推送决策条件 |
 | TC-PS-005 | 推送后台管理 | `test_push_server.sh` | 管理后台检查 |
+| TC-AUTH-001~004 | 用户认证 | `test_auth_api.sh` | 注册/登录/Token校验/用户信息 |
+| TC-FR-001~005 | 好友管理 | `test_friend_api.sh` | 添加/同意/列表/搜索/删除 |
+| TC-GRP-001~007 | 群组CRUD | `test_group_api.sh` | 创建/成员/转让群主/解散 |
+| TC-BLK-001~003 | 黑名单 | `test_block_api.sh` | 拉黑/列表/解除 |
+| TC-SYNC-001~003 | 离线同步 | `test_offline_sync.sh` | 队列/拉取/清除 |
+| TC-DEV-001~003 | 多设备 | `test_multi_device.sh` | 设备查询/同步/踢下线 |
+| TC-RECALL-001~003 | 撤回删除 | `test_recall_delete.sh` | 撤回/删除/查询 |
+| TC-RECPT-001~002 | 已读回执 | `test_read_receipt.sh` | 回执发送/未读数 |
+| TC-RICH-001~006 | 富消息 | `test_rich_message.sh` | 图片/语音/视频/文件/位置/自定义 |
+| TC-TYPE-001~002 | 输入状态 | `test_typing.sh` | 正在输入/停止输入 |
+| TC-FILE-001~003 | 文件上传 | `test_file_upload.sh` | Token/下载/校验 |
+| TC-SRCH-001~003 | 消息搜索 | `test_message_search.sh` | 消息/用户/群组搜索 |
+| TC-SEC-001~004 | 限流安全 | `test_rate_limit.sh` | 限流/敏感词/IP黑名单 |
+| TC-PUSH-E2E-001~003 | 推送E2E | `test_push_e2e.sh` | 健康检查/触发/记录 |
 
 ## 性能基准速查
 
